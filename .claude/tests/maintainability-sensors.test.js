@@ -5,7 +5,12 @@ const path = require("node:path");
 const test = require("node:test");
 const {
   checkFileSizes,
+  checkFunctionSizes,
+  checkExceptionHandling,
+  checkLoggingDiscipline,
+  checkPerformanceHeuristics,
   checkNearDuplication,
+  runAllMaintainabilitySensors,
   loadMaintainabilityConfig,
 } = require("../lib/maintainability-sensors");
 
@@ -86,4 +91,72 @@ test("loadMaintainabilityConfig uses defaults when file missing", () => {
   const loaded = loadMaintainabilityConfig(root);
   assert.equal(loaded.defaults, true);
   assert.equal(loaded.config.file_size.max_lines, 300);
+  assert.equal(loaded.config.function_size.max_lines, 30);
+});
+
+test("function-size fails when a function exceeds max_lines", () => {
+  const root = tempProject();
+  fs.writeFileSync(
+    path.join(root, ".claude", "project", "maintainability.json"),
+    JSON.stringify({
+      version: 1,
+      function_size: { max_lines: 5, warn_lines: 4, severity: "fail", extensions: [".js"] },
+    })
+  );
+  const body = [
+    "function big() {",
+    ...Array.from({ length: 10 }, (_, i) => `  const x${i} = ${i};`),
+    "  return x0;",
+    "}",
+    "",
+  ].join("\n");
+  fs.writeFileSync(path.join(root, "src", "fn.js"), body);
+  const result = checkFunctionSizes(root, ["src/fn.js"]);
+  assert.equal(result.status, "fail");
+  assert.match(result.reason, /big/);
+});
+
+test("exception-handling fails on empty catch", () => {
+  const root = tempProject();
+  fs.writeFileSync(path.join(root, "src", "bad.js"), "try { f(); } catch (e) {}\n");
+  const result = checkExceptionHandling(root, ["src/bad.js"]);
+  assert.equal(result.status, "fail");
+  assert.match(result.reason, /empty catch/i);
+});
+
+test("logging-discipline warns on catch without log or rethrow", () => {
+  const root = tempProject();
+  fs.writeFileSync(
+    path.join(root, "src", "silent.js"),
+    "try {\n  f();\n} catch (e) {\n  x = 1;\n}\n"
+  );
+  const result = checkLoggingDiscipline(root, ["src/silent.js"]);
+  assert.notEqual(result.status, "pass");
+  assert.match(result.reason, /log|Logging/i);
+});
+
+test("performance-heuristics warns on nested loops", () => {
+  const root = tempProject();
+  fs.writeFileSync(
+    path.join(root, "src", "nested.js"),
+    "function scan(a, b) {\n  for (const x of a) {\n    for (const y of b) {\n      use(x, y);\n    }\n  }\n}\n"
+  );
+  const result = checkPerformanceHeuristics(root, ["src/nested.js"]);
+  assert.equal(result.status, "warn");
+  assert.match(result.reason, /nested/i);
+});
+
+test("runAllMaintainabilitySensors returns the full craft suite", () => {
+  const root = tempProject();
+  fs.writeFileSync(path.join(root, "src", "ok.js"), "function ok() {\n  return 1;\n}\n");
+  const suite = runAllMaintainabilitySensors(root, ["src/ok.js"]);
+  const ids = suite.map((item) => item.sensorId);
+  assert.deepEqual(ids, [
+    "file-size",
+    "function-size",
+    "exception-handling",
+    "logging-discipline",
+    "performance-heuristics",
+    "near-duplication",
+  ]);
 });

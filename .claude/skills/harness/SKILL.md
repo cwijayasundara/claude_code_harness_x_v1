@@ -24,6 +24,23 @@ run sensors/CI, maintain evidence, or otherwise operate the harness rather
 than deliver a product change, invoke `harness-operations` and stop this
 delivery workflow. If it is a retrospective, invoke `harness-retro` instead.
 
+## 0. Vibe / outside-the-loop re-entry
+
+If the user was **vibe coding** (outside the loop) or the tree has ungoverned
+agent edits, do **not** skip sensors:
+
+1. Run `node "$CLAUDE_PLUGIN_ROOT/scripts/harness-sensors.js" .` (or `--changed`
+   paths). Craft sensors always run: file-size, function-size, exception-handling,
+   logging-discipline, performance-heuristics, near-duplication, secrets, boundaries.
+2. Run `harness-status.js . --agent` and clear **fail** findings before co-design.
+3. Use the target template `.claude/specs/vibe-to-harness.template.md` (or copy from
+   plugin `templates/project/.claude/specs/vibe-to-harness.template.md`) to capture a
+   governing source file, then continue at step 1 below.
+4. Prefer brownfield B0–B2 when the spike already sprawled across many modules.
+
+Sensors are **mode-independent**: they run for vibe sessions and for `/harness`
+story work. Co-design gates still apply before product claims and draft PRs.
+
 ## 1. Establish the grounded change
 
 1. Confirm the target project has `.claude/harness.yaml`; if not, run `node "$CLAUDE_PLUGIN_ROOT/scripts/harness-init.js" .` from the target project before proceeding.

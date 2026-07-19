@@ -5,7 +5,7 @@ function validateReleaseLayout(root) {
   const errors = [];
   if (path.basename(root) === ".claude") {
     const repositoryRoot = path.dirname(root);
-    const allowedRootEntries = new Set([".git", ".claude", "CLAUDE.md", "README.md"]);
+    const allowedRootEntries = new Set([".git", ".claude", ".vscode", "CLAUDE.md", "README.md", "design.html"]);
     for (const entry of fs.readdirSync(repositoryRoot)) if (!allowedRootEntries.has(entry)) errors.push(`Unexpected repository-root entry: ${entry}`);
   }
   const pluginPath = path.join(root, ".claude-plugin", "plugin.json");

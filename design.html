@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Lean Expert-Generalist Harness — Design</title>
+<meta name="description" content="Complete design for the lean Claude Code harness: human-steered co-design, story ratchet, independent evaluation, deterministic sensors, evolutionary architecture." />
+<style>
+  :root {
+    --bg: #0b0f14;
+    --bg-elev: #111821;
+    --bg-card: #151d28;
+    --bg-hover: #1a2433;
+    --border: #243041;
+    --border-soft: #1c2634;
+    --text: #e7eef8;
+    --text-dim: #9aabbf;
+    --text-mute: #6b7c91;
+    --accent: #5b9dff;
+    --accent-2: #7c5cff;
+    --accent-3: #2dd4bf;
+    --warn: #f5a524;
+    --danger: #f87171;
+    --ok: #34d399;
+    --gen: #60a5fa;
+    --eval: #c084fc;
+    --human: #fbbf24;
+    --sidebar-w: 272px;
+    --radius: 12px;
+    --font: "Inter", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    --mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    --shadow: 0 12px 40px rgba(0,0,0,.35);
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+  body {
+    margin: 0;
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.65;
+    font-size: 15.5px;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code, .mono { font-family: var(--mono); font-size: 0.88em; }
+  code {
+    background: rgba(91,157,255,.1);
+    border: 1px solid rgba(91,157,255,.18);
+    padding: 0.1em 0.4em;
+    border-radius: 6px;
+    color: #c7dcff;
+  }
+  pre {
+    background: #0a1018;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    line-height: 1.5;
+  }
+  pre code { background: none; border: none; padding: 0; color: #d6e4ff; }
+  blockquote.doctrine {
+    margin: 1.25rem 0;
+    padding: 1.1rem 1.25rem;
+    border-left: 3px solid var(--accent-2);
+    background: linear-gradient(90deg, rgba(124,92,255,.12), transparent 70%);
+    border-radius: 0 12px 12px 0;
+    font-size: 1.08rem;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+    color: #f0f4ff;
+  }
+  blockquote.doctrine p { margin: 0; }
+
+  .shell { display: flex; min-height: 100vh; }
+  .sidebar {
+    position: fixed; inset: 0 auto 0 0;
+    width: var(--sidebar-w);
+    background: linear-gradient(180deg, #0d131b 0%, #0a0f15 100%);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; z-index: 40;
+  }
+  .sidebar-head { padding: 1.1rem 1rem 0.85rem; border-bottom: 1px solid var(--border-soft); }
+  .brand { display: flex; gap: .7rem; align-items: center; margin-bottom: .5rem; }
+  .brand-mark {
+    width: 34px; height: 34px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: grid; place-items: center;
+    font-weight: 800; font-size: 11px; color: white;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 8px 24px rgba(91,157,255,.25);
+  }
+  .brand h1 { margin: 0; font-size: 0.9rem; font-weight: 700; letter-spacing: -0.02em; }
+  .brand p { margin: 0; font-size: 0.7rem; color: var(--text-mute); }
+  .nav { overflow-y: auto; padding: .75rem .55rem 1.5rem; flex: 1; }
+  .nav-group { margin-bottom: .75rem; }
+  .nav-group-title {
+    font-size: 0.66rem; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--text-mute); padding: .35rem .55rem; font-weight: 700;
+  }
+  .nav a {
+    display: block; color: var(--text-dim); text-decoration: none;
+    padding: .36rem .55rem; border-radius: 8px; font-size: 0.82rem;
+    border: 1px solid transparent;
+  }
+  .nav a:hover { background: var(--bg-hover); color: var(--text); text-decoration: none; }
+  .nav a.active {
+    background: rgba(91,157,255,.12); color: #d6e8ff;
+    border-color: rgba(91,157,255,.22);
+  }
+
+  .main { margin-left: var(--sidebar-w); flex: 1; min-width: 0; }
+  .topbar {
+    position: sticky; top: 0; z-index: 30;
+    backdrop-filter: blur(14px);
+    background: rgba(11,15,20,.78);
+    border-bottom: 1px solid var(--border-soft);
+    padding: .7rem 1.75rem;
+    display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+  }
+  .crumbs { color: var(--text-mute); font-size: .84rem; }
+  .crumbs strong { color: var(--text-dim); font-weight: 600; }
+  .pill-row { display: flex; gap: .4rem; flex-wrap: wrap; }
+  .pill {
+    font-size: .72rem; font-weight: 600;
+    padding: .22rem .55rem; border-radius: 999px;
+    border: 1px solid var(--border); color: var(--text-dim); background: var(--bg-card);
+  }
+  .pill.accent { border-color: rgba(91,157,255,.4); color: #b9d6ff; background: rgba(91,157,255,.1); }
+  .pill.ok { border-color: rgba(52,211,153,.35); color: #9ff0c8; background: rgba(52,211,153,.08); }
+  .pill.warn { border-color: rgba(245,165,36,.35); color: #ffd899; background: rgba(245,165,36,.08); }
+
+  .content { max-width: 960px; margin: 0 auto; padding: 1.5rem 1.75rem 5rem; }
+  section.section { margin-bottom: 3rem; scroll-margin-top: 76px; }
+  .section > h2 {
+    font-size: 1.6rem; letter-spacing: -0.03em; margin: 0 0 .35rem; padding-top: .25rem;
+  }
+  .section > .lede {
+    color: var(--text-dim); font-size: 1.02rem; margin: 0 0 1.35rem; max-width: 64ch;
+  }
+  h3 { font-size: 1.12rem; margin: 1.7rem 0 .6rem; letter-spacing: -0.02em; }
+  h4 { font-size: .96rem; margin: 1.2rem 0 .45rem; color: #dbe7f7; }
+  p { margin: .5rem 0 0.85rem; color: #d2dceb; }
+  ul, ol { margin: .35rem 0 1rem; padding-left: 1.25rem; color: #d2dceb; }
+  li { margin: .26rem 0; }
+  li::marker { color: var(--text-mute); }
+  table {
+    width: 100%; border-collapse: collapse; margin: 1rem 0 1.4rem;
+    font-size: .9rem;
+  }
+  th, td {
+    text-align: left; padding: .55rem .65rem;
+    border: 1px solid var(--border-soft); vertical-align: top;
+  }
+  th { background: var(--bg-elev); color: var(--text-dim); font-weight: 650; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
+  td { background: rgba(255,255,255,.015); color: #d2dceb; }
+  tr:hover td { background: rgba(91,157,255,.04); }
+
+  .hero {
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 1.75rem 1.6rem 1.5rem;
+    background:
+      radial-gradient(900px 280px at 10% -20%, rgba(91,157,255,.18), transparent 60%),
+      radial-gradient(700px 260px at 90% 0%, rgba(124,92,255,.16), transparent 55%),
+      linear-gradient(180deg, #121a24 0%, #0e141c 100%);
+    box-shadow: var(--shadow);
+    margin-bottom: 2rem;
+    overflow: hidden;
+  }
+  .hero .eyebrow {
+    font-size: .72rem; font-weight: 800; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: .55rem;
+  }
+  .hero h2 {
+    font-size: 1.85rem; letter-spacing: -0.04em; margin: 0 0 .5rem; line-height: 1.18;
+  }
+  .hero p { font-size: 1.05rem; color: var(--text-dim); max-width: 62ch; margin: 0 0 1rem; }
+  .hero-meta {
+    display: flex; flex-wrap: wrap; gap: .5rem .85rem;
+    font-size: .82rem; color: var(--text-mute); margin-bottom: 1rem;
+  }
+  .hero-meta strong { color: var(--text-dim); font-weight: 600; }
+  .hero-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: .7rem; margin-top: 1rem;
+  }
+  .hero-stat {
+    background: rgba(255,255,255,.03);
+    border: 1px solid var(--border-soft);
+    border-radius: 12px; padding: .8rem .85rem;
+  }
+  .hero-stat .n { font-size: 1.15rem; font-weight: 750; letter-spacing: -0.03em; color: #fff; }
+  .hero-stat .l { font-size: .76rem; color: var(--text-mute); margin-top: .12rem; }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: .85rem; margin: 1rem 0 1.25rem;
+  }
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.05rem;
+  }
+  .card h4 { margin: 0 0 .4rem; color: #fff; font-size: .95rem; }
+  .card p { margin: 0; font-size: .88rem; color: var(--text-dim); }
+  .card .tag {
+    display: inline-block; font-size: .68rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .06em;
+    color: var(--accent); margin-bottom: .4rem;
+  }
+  .card.gen { border-color: rgba(96,165,250,.35); }
+  .card.eval { border-color: rgba(192,132,252,.35); }
+  .card.human { border-color: rgba(251,191,36,.35); }
+  .card.ok { border-color: rgba(52,211,153,.3); }
+
+  .flow {
+    display: flex; flex-wrap: wrap; gap: .45rem; align-items: center;
+    margin: 1rem 0 1.25rem;
+  }
+  .flow .step {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: .45rem .7rem;
+    font-size: .82rem; font-weight: 600; color: #e0ebfa;
+    font-family: var(--mono);
+  }
+  .flow .arrow { color: var(--text-mute); font-size: .9rem; }
+
+  .compare {
+    display: grid; grid-template-columns: 1fr 1fr; gap: .85rem; margin: 1rem 0;
+  }
+  .compare .col {
+    border-radius: var(--radius); padding: 1rem 1.05rem;
+    border: 1px solid var(--border); background: var(--bg-card);
+  }
+  .compare .col.bad { border-color: rgba(248,113,113,.35); }
+  .compare .col.good { border-color: rgba(52,211,153,.35); }
+  .compare .col h4 { margin: 0 0 .5rem; }
+  .compare .col.bad h4 { color: #fca5a5; }
+  .compare .col.good h4 { color: #6ee7b7; }
+
+  .callout {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.1rem;
+    background: var(--bg-elev);
+    margin: 1rem 0 1.25rem;
+  }
+  .callout.warn {
+    border-color: rgba(245,165,36,.35);
+    background: linear-gradient(90deg, rgba(245,165,36,.08), transparent 80%);
+  }
+  .callout.ok {
+    border-color: rgba(52,211,153,.3);
+    background: linear-gradient(90deg, rgba(52,211,153,.07), transparent 80%);
+  }
+  .callout strong { color: #fff; }
+
+  .layers {
+    display: grid; gap: .55rem; margin: 1rem 0;
+  }
+  .layer {
+    display: grid; grid-template-columns: 140px 1fr;
+    gap: .75rem; align-items: start;
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: .75rem .9rem; background: var(--bg-card);
+  }
+  .layer .name {
+    font-weight: 700; font-size: .85rem; color: #fff;
+    font-family: var(--mono);
+  }
+  .layer p { margin: 0; font-size: .88rem; color: var(--text-dim); }
+
+  .toc-note {
+    font-size: .8rem; color: var(--text-mute); padding: .5rem .55rem 0;
+  }
+
+  footer.doc-foot {
+    margin-top: 2.5rem; padding-top: 1.25rem;
+    border-top: 1px solid var(--border-soft);
+    color: var(--text-mute); font-size: .82rem;
+  }
+
+  @media (max-width: 960px) {
+    .sidebar { display: none; }
+    .main { margin-left: 0; }
+    .hero-grid { grid-template-columns: 1fr 1fr; }
+    .compare { grid-template-columns: 1fr; }
+    .layer { grid-template-columns: 1fr; }
+  }
+  @media print {
+    .sidebar, .topbar { display: none; }
+    .main { margin-left: 0; }
+    body { background: #fff; color: #111; }
+    p, li, td { color: #222; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar" aria-label="Document navigation">
+    <div class="sidebar-head">
+      <div class="brand">
+        <div class="brand-mark">LEAN</div>
+        <div>
+          <h1>Expert-Generalist</h1>
+          <p>Harness design · v1</p>
+        </div>
+      </div>
+      <p class="toc-note">Human-steered · two loops · thin plugin</p>
+    </div>
+    <nav class="nav">
+      <div class="nav-group">
+        <div class="nav-group-title">Start</div>
+        <a href="#hero" class="active">Cover</a>
+        <a href="#exec">1. Executive summary</a>
+        <a href="#problem">2. Problem &amp; motivation</a>
+        <a href="#doctrine">3. Doctrine</a>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-title">Architecture</div>
+        <a href="#two-loops">4. Two loops</a>
+        <a href="#layers">5. System layers</a>
+        <a href="#codesign">6. Co-design G0–G4</a>
+        <a href="#evolution">7. Evolutionary design</a>
+        <a href="#ratchet">8. Story ratchet</a>
+        <a href="#brownfield">9. Brownfield B0–B2</a>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-title">Controls</div>
+        <a href="#gan">10. Generator ≠ evaluator</a>
+        <a href="#sensors">11. Sensors &amp; verification</a>
+        <a href="#routing">12. Routing &amp; context</a>
+        <a href="#surface">13. Public surface</a>
+        <a href="#layout">14. Layout &amp; artifacts</a>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-title">Operations</div>
+        <a href="#upgrade">15. Init &amp; upgrade</a>
+        <a href="#vs-v5">16. vs Engine v5</a>
+        <a href="#oos">17. Out of scope</a>
+        <a href="#success">18. Success metrics</a>
+        <a href="#appendix">Appendix</a>
+      </div>
+    </nav>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="crumbs"><strong>design.html</strong> · Lean Expert-Generalist Harness</div>
+      <div class="pill-row">
+        <span class="pill accent">Claude Code plugin</span>
+        <span class="pill ok">Two loops</span>
+        <span class="pill warn">Draft PR only</span>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- HERO -->
+      <header class="hero" id="hero">
+        <div class="eyebrow">Technical design document</div>
+        <h2>Lean Expert-Generalist Harness</h2>
+        <p>
+          A deliberately small Claude Code plugin that turns a bounded request into a
+          tested, reviewable draft PR. Humans approve meaning, tests, architecture, and
+          material risk. Agents execute one story at a time—never marking their own homework.
+        </p>
+        <div class="hero-meta">
+          <span><strong>Product:</strong> claude_code_harness_x_v1</span>
+          <span><strong>Form:</strong> plugin under <code>.claude/</code></span>
+          <span><strong>Doctrine:</strong> humans on the loop</span>
+          <span><strong>Status:</strong> living design · 2026-07-19</span>
+        </div>
+        <div class="hero-grid">
+          <div class="hero-stat"><div class="n">3</div><div class="l">Public delivery skills</div></div>
+          <div class="hero-stat"><div class="n">3</div><div class="l">Agents (gen + eval + fast)</div></div>
+          <div class="hero-stat"><div class="n">1</div><div class="l">Destructive-Git safety hook</div></div>
+          <div class="hero-stat"><div class="n">2</div><div class="l">Loops only (co-design + ratchet)</div></div>
+        </div>
+      </header>
+
+      <!-- 1 EXEC -->
+      <section class="section" id="exec">
+        <h2>1. Executive summary</h2>
+        <p class="lede">
+          Agent = model + harness. The model writes code; the harness is everything around it
+          that makes output trustworthy—guides before action, sensors after, and a human
+          steering loop that improves the system over time.
+        </p>
+
+        <blockquote class="doctrine">
+          <p>A senior engineer plans before coding, writes the test first, never marks their own homework, refuses silent quality slip, reviews before merge, and learns from every mistake. The harness encodes those habits as mechanisms—so behaviour is predictable, not aspirational.</p>
+        </blockquote>
+
+        <div class="cards">
+          <div class="card">
+            <div class="tag">What it is</div>
+            <h4>Thin Claude Code plugin</h4>
+            <p>Skills, agents, one safety hook, deterministic Node scripts and contracts. Target repos get a short <code>CLAUDE.md</code>; control plane stays under <code>.claude/</code>.</p>
+          </div>
+          <div class="card">
+            <div class="tag">Core idea</div>
+            <h4>Co-design then ratchet</h4>
+            <p>Human-gated G0–G4 (and B0–B2 brownfield) freezes intent and shape. The story ratchet then enforces red → green → independent review → sensors → verified.</p>
+          </div>
+          <div class="card">
+            <div class="tag">Guarantee</div>
+            <h4>Generator ≠ evaluator</h4>
+            <p>Sonnet implements; Opus evaluates read-only in fresh context. Deterministic sensors never trust agent narrative. Merge and deploy stay human.</p>
+          </div>
+          <div class="card">
+            <div class="tag">Outcome</div>
+            <h4>Draft PR readiness</h4>
+            <p>Auditable specs, evidence hashes, branch review, and fail-closed pre-PR verification—not automatic merge, not a second Devin.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2 PROBLEM -->
+      <section class="section" id="problem">
+        <h2>2. Problem &amp; motivation</h2>
+        <p class="lede">
+          Left unharnessed—or harnessed with unbounded ceremony—agentic coding hits
+          failure modes that compound across sessions and report types.
+        </p>
+
+        <h3>2.1 Three classic agent failures</h3>
+        <div class="cards">
+          <div class="card">
+            <div class="tag" style="color:var(--danger)">Self-evaluation bias</div>
+            <h4>Author grades own work</h4>
+            <p>Confirmation bias, rationalizing failing tests, scope creep. <strong>Defeated by:</strong> independent evaluator + real command evidence.</p>
+          </div>
+          <div class="card">
+            <div class="tag" style="color:var(--warn)">Quality regression</div>
+            <h4>Codebase decays per story</h4>
+            <p>God files, layer violations, copy-paste pipelines, silent gate bugs. <strong>Defeated by:</strong> boundaries, file-size, duplication sensors, evolutionary G3.</p>
+          </div>
+          <div class="card">
+            <div class="tag" style="color:var(--accent)">Context exhaustion</div>
+            <h4>Sessions lose the plot</h4>
+            <p>Work restarts; requirements compress; mistakes repeat. <strong>Defeated by:</strong> immutable specs, story contracts, protected context packs, feature-branch checkpoints.</p>
+          </div>
+        </div>
+
+        <h3>2.2 The v5 trap (why this product is lean)</h3>
+        <div class="compare">
+          <div class="col bad">
+            <h4>Engine v5 growth mode</h4>
+            <ul>
+              <li>~49 skills, many agents, 12+ hook surfaces</li>
+              <li>~138 scripts / ~19.5k LOC in scripts alone</li>
+              <li>Gap ledger G1–G36; every article → new control</li>
+              <li>Simplification proposals that still added surface</li>
+              <li>Public command explosion</li>
+            </ul>
+          </div>
+          <div class="col good">
+            <h4>Lean harness reaction</h4>
+            <ul>
+              <li>Three public delivery skills + operations</li>
+              <li>Three agents; one destructive-Git hook</li>
+              <li>Deterministic contract spine in Node</li>
+              <li><strong>Control budget</strong> + net-add justification</li>
+              <li>Retro may <em>remove</em> zero-fire sensors</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>2.3 Where humans sit (inspiration: on the loop)</h3>
+        <table>
+          <thead>
+            <tr><th>Mode</th><th>Human role</th><th>Agent role</th><th>Lean stance</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Outside the loop</td>
+              <td>Owns outcomes only</td>
+              <td>Owns how end-to-end</td>
+              <td>Rejected as default (“vibe”) for material risk</td>
+            </tr>
+            <tr>
+              <td>In the loop</td>
+              <td>Hand-corrects every artifact</td>
+              <td>Generates for review</td>
+              <td>Human becomes bottleneck</td>
+            </tr>
+            <tr>
+              <td><strong>On the loop</strong></td>
+              <td>Builds/tunes harness: gates, specs, sensors</td>
+              <td>Operates inside harness</td>
+              <td><strong>Home for this product</strong></td>
+            </tr>
+            <tr>
+              <td>Flywheel</td>
+              <td>Approves harness improvements from data</td>
+              <td>Proposes sensors/guides via retro</td>
+              <td>Supported; never auto-merge of harness PRs</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- 3 DOCTRINE -->
+      <section class="section" id="doctrine">
+        <h2>3. Doctrine</h2>
+        <p class="lede">Non-negotiables that every design choice must pass.</p>
+        <ol>
+          <li><strong>Humans steer product meaning</strong> — approvals recorded with name and time in <code>index.json</code>.</li>
+          <li><strong>Repository is system of record</strong> — if the agent cannot open it, it does not exist.</li>
+          <li><strong>Specs before code</strong> — no product implementation before G4 (and B2 when brownfield).</li>
+          <li><strong>Tests before green</strong> — red evidence is a real command with non-zero exit, not invented.</li>
+          <li><strong>Generator never self-advances the ratchet</strong> — main workflow owns state transitions.</li>
+          <li><strong>Evaluator is fresh-context and read-only</strong> — never trusts generator narrative.</li>
+          <li><strong>One automated repair</strong> — then <code>human-decision-required</code>.</li>
+          <li><strong>Draft PR only</strong> — no merge, deploy, or fleet automation.</li>
+          <li><strong>Protected branches are write-forbidden</strong> for specs and product code (<code>main</code>/<code>master</code>/<code>develop</code>).</li>
+          <li><strong>Subtractive ratchet on the harness</strong> — every new control pays rent or replaces another.</li>
+        </ol>
+      </section>
+
+      <!-- 4 TWO LOOPS -->
+      <section class="section" id="two-loops">
+        <h2>4. Architecture: two loops only</h2>
+        <p class="lede">
+          Complexity is capped by refusing a third loop. Everything is either co-design
+          (no product code) or story execution (bounded, evidenced).
+        </p>
+
+        <div class="cards">
+          <div class="card human">
+            <div class="tag" style="color:var(--human)">Loop 1 · Co-design</div>
+            <h4>Human-gated · no product code</h4>
+            <p>G0→G4 greenfield; B0→B2 then G1–G4 brownfield. Agent drafts; human revises; proposal packs are reviewable markdown sessions; <code>approve</code> freezes artifacts.</p>
+          </div>
+          <div class="card gen">
+            <div class="tag" style="color:var(--gen)">Loop 2 · Story ratchet</div>
+            <h4>Agent executes · sensors + evaluator</h4>
+            <p>One dependency-ready story at a time. RED_TEST → IMPLEMENT → STORY_REVIEW → FAST_SENSORS → STORY_VERIFIED. Then pre-PR + branch review → draft PR readiness.</p>
+          </div>
+        </div>
+
+        <h3>End-to-end greenfield</h3>
+        <div class="flow">
+          <span class="step">G0</span><span class="arrow">→</span>
+          <span class="step">G1</span><span class="arrow">→</span>
+          <span class="step">G2</span><span class="arrow">→</span>
+          <span class="step">G3</span><span class="arrow">→</span>
+          <span class="step">G4</span><span class="arrow">→</span>
+          <span class="step">Ratchet × N</span><span class="arrow">→</span>
+          <span class="step">Pre-PR</span><span class="arrow">→</span>
+          <span class="step">Branch review</span><span class="arrow">→</span>
+          <span class="step">Draft PR</span>
+        </div>
+      </section>
+
+      <!-- 5 LAYERS -->
+      <section class="section" id="layers">
+        <h2>5. System layers</h2>
+        <p class="lede">Progressive disclosure: load only what the task needs.</p>
+        <div class="layers">
+          <div class="layer">
+            <div class="name">Base craft</div>
+            <p>TDD, debugging, cohesion, dependency direction, pragmatic SOLID/OO, DDD where approved, refactoring, measured performance — skill <code>harness-engineering-core</code>.</p>
+          </div>
+          <div class="layer">
+            <div class="name">Language packs</div>
+            <p>Path-scoped Python / TypeScript guides + sensors. Loaded by signal, not every session.</p>
+          </div>
+          <div class="layer">
+            <div class="name">Framework packs</div>
+            <p>Optional FastAPI, LangChain, LangGraph, Deep Agents, Google ADK — only when profiles match. Never a framework encyclopedia in always-on context.</p>
+          </div>
+          <div class="layer">
+            <div class="name">Outer control</div>
+            <p>Spec packages, human gates, story ratchet, sensors, cost routing, verification plan, draft-PR readiness, control budget.</p>
+          </div>
+        </div>
+
+        <h3>Claude Code primitives (use, don’t reimplement)</h3>
+        <table>
+          <thead><tr><th>Concern</th><th>Primitive</th><th>Lean rule</th></tr></thead>
+          <tbody>
+            <tr><td>Always-on map</td><td>Root <code>CLAUDE.md</code></td><td>≤ ~80–120 lines; progressive disclosure</td></tr>
+            <tr><td>User workflow</td><td>Skills</td><td>Public: <code>/harness</code>, <code>/harness-status</code>, <code>/harness-retro</code></td></tr>
+            <tr><td>Implement</td><td>Subagent generator (Sonnet)</td><td>Fresh context; no self-advance</td></tr>
+            <tr><td>Validate</td><td>Subagent evaluator (Opus)</td><td>Read-only; strong for risk/branch</td></tr>
+            <tr><td>Hard enforcement</td><td>Hook</td><td>Destructive Git only (not 13 hooks/edit)</td></tr>
+            <tr><td>Evidence</td><td>Scripts + JSON artifacts</td><td>Hash-checked; fail-closed kinds</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- 6 CODESIGN -->
+      <section class="section" id="codesign">
+        <h2>6. Co-design gates (G0–G4)</h2>
+        <p class="lede">
+          Superpowers-style design sessions: agent drafts, human decides.
+          Each gate produces a narrative proposal pack (not only raw JSON) before
+          <code>approve</code>.
+        </p>
+
+        <table>
+          <thead><tr><th>Gate</th><th>Packages</th><th>Human decides</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code>G0</code></td>
+              <td>source + brd/prd</td>
+              <td>Grounded interpretation: outcomes, in/out scope, assumptions, open questions</td>
+            </tr>
+            <tr>
+              <td><code>G1</code></td>
+              <td>epics, stories, dependencies</td>
+              <td>Vertical stories with acceptance; dependency DAG / sequence</td>
+            </tr>
+            <tr>
+              <td><code>G2</code></td>
+              <td>test-data, test-cases, test-plans</td>
+              <td>Cases, fixtures, hermetic strategy, doubles, expected results</td>
+            </tr>
+            <tr>
+              <td><code>G3</code></td>
+              <td>design, architecture</td>
+              <td>Seams, folder layout, structural shape, budgets, second-slice policy</td>
+            </tr>
+            <tr>
+              <td><code>G4</code></td>
+              <td>plans (story contracts)</td>
+              <td>Scope, tests, sensors, <code>implementation_posture</code>, reuse targets</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="callout">
+          <strong>Proposal UX.</strong> <code>harness-specs.js proposal --change … --gate Gx --write</code>
+          writes <code>.claude/specs/evidence/*-gate-Gx-proposal.md</code> with a human decision session
+          (checklist + narrative) and a JSON appendix. Do not ask humans to approve raw JSON alone.
+        </div>
+
+        <h3>Gate sequence rules</h3>
+        <ul>
+          <li>Gates are sequential; predecessor approval is required.</li>
+          <li>Approved artifacts are immutable; change requires amendment + re-approval.</li>
+          <li>Ambiguity that affects behaviour, security, architecture, or tests → stop and ask.</li>
+        </ul>
+      </section>
+
+      <!-- 7 EVOLUTION -->
+      <section class="section" id="evolution">
+        <h2>7. Evolutionary architecture (G3 + G4)</h2>
+        <p class="lede">
+          Prevents the “six cloned pipelines” failure mode without baking in any
+          framework spine (LangGraph, workers, plain modules — project choice).
+        </p>
+
+        <h3>7.1 Three structural alternatives (required at G3)</h3>
+        <div class="cards">
+          <div class="card">
+            <div class="tag">clone-vertical</div>
+            <h4>Independent stacks</h4>
+            <p>Full vertical slice per feature/entity. Fast first delivery; highest duplication risk.</p>
+          </div>
+          <div class="card">
+            <div class="tag">shared-modules</div>
+            <h4>Thin entrypoints + helpers</h4>
+            <p>Shared pure helpers without a single orchestrating spine. Good when flows diverge but helpers do not.</p>
+          </div>
+          <div class="card">
+            <div class="tag">parameterized-spine</div>
+            <h4>One flow + strategies</h4>
+            <p>Stages parameterized by config/strategy. Prefer when skeletons match. Technology is chosen after shape.</p>
+          </div>
+        </div>
+
+        <p>Architecture must also set <code>selected_alternative_id</code>, <code>selection_rationale</code>,
+        <code>second_slice_reuse_policy</code>, and <code>evolutionary_rules</code>. Enforced by
+        <code>lib/design-evolution.js</code> on proposal and approve.</p>
+
+        <h3>7.2 Implementation posture (required at G4)</h3>
+        <table>
+          <thead><tr><th>Posture</th><th>When</th><th>Requires</th></tr></thead>
+          <tbody>
+            <tr><td><code>first-slice</code></td><td>First capability; empty deps</td><td>Multi-story independent slices need explicit human decision text</td></tr>
+            <tr><td><code>reuse-existing</code></td><td>Call proven helpers/seams</td><td>Non-empty <code>reuse_targets</code></td></tr>
+            <tr><td><code>extract-shared</code></td><td>Pay for a shared abstraction</td><td>Reuse targets + design refs</td></tr>
+            <tr><td><code>justified-divergence</code></td><td>Truly different algorithms</td><td><code>divergence_justification</code></td></tr>
+          </tbody>
+        </table>
+        <p>Dependent stories <strong>cannot</strong> claim <code>first-slice</code>. Multi-story canary
+        proves: story-1 first-slice → story-2 reuse-existing; bad first-slice on story-2 is blocked.</p>
+      </section>
+
+      <!-- 8 RATCHET -->
+      <section class="section" id="ratchet">
+        <h2>8. Story ratchet</h2>
+        <p class="lede">Monotonic story progress with hard evidence. Quality cannot silently slip past a state gate.</p>
+
+        <div class="flow">
+          <span class="step">READY</span><span class="arrow">→</span>
+          <span class="step">RED_TEST</span><span class="arrow">→</span>
+          <span class="step">IMPLEMENT</span><span class="arrow">→</span>
+          <span class="step">STORY_REVIEW</span><span class="arrow">→</span>
+          <span class="step">FAST_SENSORS</span><span class="arrow">→</span>
+          <span class="step">STORY_VERIFIED</span>
+        </div>
+
+        <table>
+          <thead><tr><th>Check</th><th>Enforcement</th></tr></thead>
+          <tbody>
+            <tr><td>Feature branch + G4 approved</td><td>Start refused otherwise</td></tr>
+            <tr><td>Dependency stories verified</td><td>Ratchet dependency check</td></tr>
+            <tr><td>Red: real failing test</td><td>Command, exit ≠ 0, expected vs observed</td></tr>
+            <tr><td>Green: real passing test</td><td>Exit 0; paths within <code>allowed_change_scope</code></td></tr>
+            <tr><td>Independent review</td><td><code>pass</code> | <code>revise</code> | <code>human-decision-required</code></td></tr>
+            <tr><td>Repair budget</td><td>One automated repair; then human</td></tr>
+            <tr><td>Sensors</td><td>Normalized report recorded before verify</td></tr>
+            <tr><td>Evidence integrity</td><td>Hash / freshness; tampered evidence fails verify</td></tr>
+          </tbody>
+        </table>
+
+        <div class="callout warn">
+          <strong>State is not proof.</strong> <code>.claude/state/stories/</code> is resumable progress only.
+          Correctness lives in evidence + approved specs under <code>.claude/specs/</code>.
+        </div>
+      </section>
+
+      <!-- 9 BROWNFIELD -->
+      <section class="section" id="brownfield">
+        <h2>9. Brownfield path (B0–B2)</h2>
+        <p class="lede">Map before change. Reuse first. Generalize only with ≥2 real uses.</p>
+        <div class="flow">
+          <span class="step">B0 baseline</span><span class="arrow">→</span>
+          <span class="step">B1 code map</span><span class="arrow">→</span>
+          <span class="step">B2 strategy</span><span class="arrow">→</span>
+          <span class="step">G1–G4</span><span class="arrow">→</span>
+          <span class="step">Ratchet</span>
+        </div>
+        <ul>
+          <li><strong>B0</strong> — Record exact baseline build/test/lint/type/security; do not blame the change for pre-existing red.</li>
+          <li><strong>B1</strong> — Bounded map with provenance (AST/LSP and optional Graphify/CCE adapter). Canonical reuse + duplicate candidates. Open cited source before claiming.</li>
+          <li><strong>B2</strong> — Smallest seam, <code>second_slice_decision</code>, reuse targets or divergence justification, characterization tests, regression scope, design amendment.</li>
+        </ul>
+        <p>Lived brownfield canary fails if required reuse is omitted and requires calling the existing helper rather than re-copying logic.</p>
+      </section>
+
+      <!-- 10 GAN -->
+      <section class="section" id="gan">
+        <h2>10. Generator ≠ evaluator (GAN separation)</h2>
+        <p class="lede">
+          Inspiration from Engine v5 white paper: separation of writer and grader is structural,
+          not a prompt suggestion.
+        </p>
+        <div class="cards">
+          <div class="card gen">
+            <div class="tag" style="color:var(--gen)">harness-generator</div>
+            <h4>Sonnet · implement</h4>
+            <p>Receives contract + context pack only. Finds canonical local pattern. Writes tests and code. Cannot advance ratchet state.</p>
+          </div>
+          <div class="card eval">
+            <div class="tag" style="color:var(--eval)">harness-evaluator</div>
+            <h4>Opus · read-only</h4>
+            <p>Fresh context. Sources, design, story, tests, diff, evidence. Strict JSON verdict. Never sees generator’s suggested pass.</p>
+          </div>
+          <div class="card">
+            <div class="tag">harness-evaluator-fast</div>
+            <h4>Haiku · off by default</h4>
+            <p>Economical path only after matched pilots preserve quality and a human enables promotion. Strong risks never use it.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 11 SENSORS -->
+      <section class="section" id="sensors">
+        <h2>11. Sensors &amp; local verification</h2>
+        <p class="lede">
+          Fowler-style guides (feedforward) + sensors (feedback). Prefer computational sensors
+          every story; inferential review where semantics matter. Agent-consumable:
+          status, paths, reason, correction.
+        </p>
+
+        <h3>11.1 Built-in computational sensors</h3>
+        <table>
+          <thead><tr><th>Sensor</th><th>Default</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td><code>secret-scan</code></td><td>fail on hit</td><td>Credential patterns in scope</td></tr>
+            <tr><td><code>architecture-boundaries</code></td><td>fail on violation</td><td>Executable layer rules in <code>boundaries.json</code></td></tr>
+            <tr><td><code>file-size</code></td><td>max 300 lines · warn 250</td><td>God files / unbounded routers</td></tr>
+            <tr><td><code>near-duplication</code></td><td>warn · ≥8 significant lines</td><td>Copy-paste-and-adapt clusters</td></tr>
+          </tbody>
+        </table>
+        <p>Thresholds: <code>.claude/project/maintainability.json</code>. Profile sensors add lint/type/test/SAST by stack.</p>
+
+        <h3>11.2 Pre-PR local engineer simulation</h3>
+        <p>Target-owned <code>verification.json</code> must configure real commands for:</p>
+        <ul>
+          <li>install/build, unit, hermetic integration, hermetic system regression</li>
+          <li>public-seam smoke success <em>and</em> failure journeys</li>
+          <li>lint, type, security, contract/boundary doubles, performance budgets</li>
+        </ul>
+        <div class="callout ok">
+          <strong>Fail-closed.</strong> Unconfigured required kinds throw before execution.
+          No “tests green because we forgot to configure them.”
+        </div>
+
+        <h3>11.3 Control budget (anti-v5)</h3>
+        <p>Every active control in <code>harness-manifest.json</code> declares direction, execution type,
+        regulates axes, owner, recurring failure, cost, review date, removal path, and
+        (for sensors) self-correction. Budget: <code>max_active</code> + <code>baseline_ids</code>;
+        net-adds need justification or <code>replaces</code>.</p>
+      </section>
+
+      <!-- 12 ROUTING -->
+      <section class="section" id="routing">
+        <h2>12. Routing, context &amp; cost</h2>
+        <ul>
+          <li><strong>Deterministic first</strong> — scripts need no model.</li>
+          <li><strong>Sonnet</strong> — bounded implementation sidekick.</li>
+          <li><strong>Opus</strong> — architecture, domain, security, privacy, public-contract, migration, performance, branch review.</li>
+          <li><strong>Context packs</strong> — role budgets; requirements, approvals, invariants, expected results never compressed; only verbose tool output may be excerpted with hash/line provenance.</li>
+          <li><strong>Cost receipts</strong> — provider/session evidence only; never invent tokens or dollars.</li>
+        </ul>
+      </section>
+
+      <!-- 13 SURFACE -->
+      <section class="section" id="surface">
+        <h2>13. Public surface</h2>
+        <pre><code>claude --plugin-dir /absolute/path/to/claude_code_harness_x_v1/.claude
+
+/lean-expert-generalist-harness:harness "deliver requirements/change-prd.md"
+/lean-expert-generalist-harness:harness-status
+/lean-expert-generalist-harness:harness-retro</code></pre>
+        <p><code>harness-operations</code> is maintainer-facing: init, validate, sensors, upgrade, release.
+        No dashboard, no scheduler, no 20 slash commands for pipeline steps.</p>
+      </section>
+
+      <!-- 14 LAYOUT -->
+      <section class="section" id="layout">
+        <h2>14. Repository layout &amp; artifacts</h2>
+        <h3>Plugin</h3>
+        <pre><code>.claude/
+  .claude-plugin/plugin.json
+  skills/          # public workflows + engineering core
+  agents/          # generator, evaluator, evaluator-fast
+  hooks/           # pre-tool-safety (destructive Git)
+  scripts/         # thin CLIs
+  lib/             # contracts (specs, ratchet, sensors, design-evolution, …)
+  tests/           # Node test suite
+  templates/project/  # target scaffold
+  docs/            # operating model, implementation, release, roadmap
+  release/         # scorecards</code></pre>
+        <h3>Target specs</h3>
+        <pre><code>.claude/specs/
+  source/ brd|prd/ epics/ stories/ dependencies/
+  test-data/ test-cases/ test-plans/
+  design/ architecture/ plans/
+  evidence/ reviews/ brownfield/ amendments/
+  index.json   # metadata + gates + hashes only</code></pre>
+        <p>Mutable <code>.claude/state/</code> is never treated as evidence of correctness.</p>
+      </section>
+
+      <!-- 15 UPGRADE -->
+      <section class="section" id="upgrade">
+        <h2>15. Init &amp; upgrade</h2>
+        <ul>
+          <li><code>harness-init</code> — create missing scaffold files only; never overwrite target <code>CLAUDE.md</code> or policy.</li>
+          <li><code>harness-upgrade --apply</code> — missing files + <strong>merge</strong> new baseline controls (<code>file-size</code>, <code>near-duplication</code>) into existing manifests; create <code>maintainability.json</code> if absent; never clobber custom control fields.</li>
+        </ul>
+        <pre><code>node "$CLAUDE_PLUGIN_ROOT/scripts/harness-upgrade.js" --target /path/to/app --apply
+node "$CLAUDE_PLUGIN_ROOT/scripts/harness-validate.js" /path/to/app</code></pre>
+      </section>
+
+      <!-- 16 VS V5 -->
+      <section class="section" id="vs-v5">
+        <h2>16. Relationship to Claude Harness Engine v5</h2>
+        <p class="lede">
+          This design keeps v5’s <em>ideas</em> (GAN, ratchet, humans on the loop, sensors)
+          and rejects v5’s <em>platform bloat</em>. The white paper’s thesis remains;
+          the product surface is an order of magnitude smaller.
+        </p>
+        <table>
+          <thead><tr><th>v5 idea retained</th><th>Lean mapping</th></tr></thead>
+          <tbody>
+            <tr><td>Generator ≠ evaluator</td><td>Sonnet generator + Opus evaluator</td></tr>
+            <tr><td>Monotonic quality</td><td>Story ratchet + evidence hashes + sensors</td></tr>
+            <tr><td>Humans on the loop</td><td>G0–G4 / B0–B2 approvals; retro for harness</td></tr>
+            <tr><td>Scaffold + memory</td><td>Init templates + specs index + state</td></tr>
+            <tr><td>Session chaining</td><td>Feature branch + STORY_VERIFIED + contracts</td></tr>
+            <tr><td>Full SDLC command forest</td><td><strong>Dropped</strong> — three public skills</td></tr>
+            <tr><td>Fleet / attestation / deploy gates</td><td><strong>Out of scope forever</strong> for this product</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- 17 OOS -->
+      <section class="section" id="oos">
+        <h2>17. Out of scope forever (this product)</h2>
+        <ul>
+          <li>Dashboard, scheduler, fleet management</li>
+          <li>Automatic merge or deploy orchestration</li>
+          <li>General workflow engine / multi-SKU packaging</li>
+          <li>Linear/Jira platform as core (optional project MCP only)</li>
+          <li>Gap ledgers as product (G1–G36 style)</li>
+          <li>Rebuilding Claude Code’s agent runtime or permission system</li>
+        </ul>
+      </section>
+
+      <!-- 18 SUCCESS -->
+      <section class="section" id="success">
+        <h2>18. Success metrics</h2>
+        <p class="lede">Measure accepted story quality and review toil—not control count or token vanity.</p>
+        <ul>
+          <li>First-pass story acceptance rate</li>
+          <li>Human review minutes per accepted story</li>
+          <li>Escaped defects after draft PR</li>
+          <li>Sensor precision and correction rate</li>
+          <li>Provider cost per accepted story (from real receipts)</li>
+          <li>Brownfield map usefulness (reuse hit rate)</li>
+        </ul>
+        <p>Synthetic canaries prove deterministic integration. Model quality and human time remain pilot/human-gated (M7 scorecard never auto-rollouts).</p>
+      </section>
+
+      <!-- APPENDIX -->
+      <section class="section" id="appendix">
+        <h2>Appendix A · Industry synthesis (kept)</h2>
+        <ul>
+          <li><strong>Fowler</strong> — guides + sensors; computational first; harness improvement over line-by-line review</li>
+          <li><strong>SPDD / artifact DSL</strong> — structured, linkable specs; control grounding not a new language</li>
+          <li><strong>OpenAI Codex harness</strong> — progressive disclosure; enforce architecture mechanically</li>
+          <li><strong>Anthropic long-running agents</strong> — initializer then incremental worker; feature list with pass flags</li>
+          <li><strong>Stripe Minions</strong> — path-scoped checks; cap repair rounds</li>
+          <li><strong>Devin/Cognition</strong> — plan before autonomy; pre-agreed tests; status only (no full rebuild)</li>
+        </ul>
+
+        <h2>Appendix B · Key modules</h2>
+        <table>
+          <thead><tr><th>Module</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr><td><code>lib/specifications.js</code></td><td>Intake, register, proposal packs, approve, validate</td></tr>
+            <tr><td><code>lib/design-evolution.js</code></td><td>G3 alternatives, B2/G4 posture rules</td></tr>
+            <tr><td><code>lib/proposal-sessions.js</code></td><td>Narrative sessions for all gates</td></tr>
+            <tr><td><code>lib/story-ratchet.js</code></td><td>State machine + evidence gates</td></tr>
+            <tr><td><code>lib/maintainability-sensors.js</code></td><td>File-size + near-duplication</td></tr>
+            <tr><td><code>lib/architecture-boundaries.js</code></td><td>Layer import rules</td></tr>
+            <tr><td><code>lib/harness-upgrade.js</code></td><td>Missing files + manifest merge</td></tr>
+            <tr><td><code>lib/branch-verification.js</code></td><td>Pre-PR fail-closed verification</td></tr>
+            <tr><td><code>lib/routing-policy.js</code></td><td>Model route + promotion gates</td></tr>
+          </tbody>
+        </table>
+
+        <h2>Appendix C · Run &amp; prove</h2>
+        <pre><code># Plugin tests
+node --test .claude/tests/*.test.js
+
+# Canaries
+node .claude/scripts/harness-lived-canary.js
+node .claude/scripts/harness-multi-story-canary.js
+node .claude/scripts/harness-brownfield-canary.js
+node .claude/scripts/harness-release-check.js</code></pre>
+
+        <footer class="doc-foot">
+          <p>
+            <strong>Lean Expert-Generalist Harness</strong> · design.html · inspired by Claude Harness Engine v5
+            white paper themes (GAN, ratchet, humans on the loop) without the platform surface.
+            Source of truth for behaviour remains the code under <code>.claude/</code> and the living
+            roadmap in <code>.claude/docs/v1-improvement-plan.md</code>.
+          </p>
+        </footer>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Active nav highlighting
+  const links = [...document.querySelectorAll(".nav a")];
+  const sections = links
+    .map((a) => document.querySelector(a.getAttribute("href")))
+    .filter(Boolean);
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      const visible = entries
+        .filter((e) => e.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (!visible) return;
+      const id = "#" + visible.target.id;
+      links.forEach((a) => a.classList.toggle("active", a.getAttribute("href") === id));
+    },
+    { rootMargin: "-20% 0px -60% 0px", threshold: [0.1, 0.25, 0.5] }
+  );
+  sections.forEach((s) => observer.observe(s));
+</script>
+</body>
+</html>

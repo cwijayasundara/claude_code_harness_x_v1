@@ -18,13 +18,20 @@ comes only from path-signal profile selection—not from this skill.
    falsifiable root-cause hypothesis; do not stack speculative fixes.
 4. Keep code cohesive and names aligned with project/domain vocabulary. Prefer a
    small interface with clear ownership over copied flows or speculative abstractions.
-5. Run the narrowest reliable deterministic checks first, then selected
+5. **Coding craft (always):** functions ≤ 30 lines, files ≤ 300 lines; no empty/bare
+   exception swallow; structured logging on failure paths; avoid nested full scans
+   and string `+=` in loops. See [references/coding-craft.md](references/coding-craft.md).
+6. Run deterministic sensors **after every meaningful edit batch** — vibe session or
+   `/harness` alike: `harness-sensors.js` then `harness-status.js . --agent`. Sensors
+   do not wait for G4; they regulate maintainability regardless of co-design state.
+7. Run the narrowest reliable deterministic checks first, then selected
    profile/domain checks. Record fresh evidence and residual risks.
 
 ## Progressive references (load only when relevant)
 
 | Topic | Open when… | File |
 | --- | --- | --- |
+| Coding craft | any implement/edit (vibe or harness) | [references/coding-craft.md](references/coding-craft.md) |
 | TDD | implementing or fixing behaviour | [references/tdd.md](references/tdd.md) |
 | Design / ports | structure or dependency direction matters | [references/design.md](references/design.md) |
 | DDD | approved domain language or invariants apply | [references/ddd.md](references/ddd.md) |

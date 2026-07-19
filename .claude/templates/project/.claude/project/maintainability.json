@@ -6,6 +6,32 @@
     "extensions": [".py", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".go", ".rs", ".java", ".kt"],
     "ignore_path_parts": ["node_modules", ".git", "dist", "build", ".venv", "venv", "vendor", "generated"]
   },
+  "function_size": {
+    "max_lines": 30,
+    "warn_lines": 25,
+    "severity": "fail",
+    "max_findings": 30,
+    "extensions": [".py", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".go", ".rs", ".java", ".kt"],
+    "ignore_path_parts": ["node_modules", ".git", "dist", "build", ".venv", "venv", "vendor", "generated"]
+  },
+  "exception_handling": {
+    "severity": "fail",
+    "max_findings": 30,
+    "extensions": [".py", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".go", ".rs", ".java", ".kt"],
+    "ignore_path_parts": ["node_modules", ".git", "dist", "build", ".venv", "venv", "vendor", "generated"]
+  },
+  "logging": {
+    "severity": "warn",
+    "max_findings": 30,
+    "extensions": [".py", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".go", ".rs", ".java", ".kt"],
+    "ignore_path_parts": ["node_modules", ".git", "dist", "build", ".venv", "venv", "vendor", "generated", "test", "tests", "__tests__", "spec"]
+  },
+  "performance": {
+    "severity": "warn",
+    "max_findings": 20,
+    "extensions": [".py", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".go", ".rs", ".java", ".kt"],
+    "ignore_path_parts": ["node_modules", ".git", "dist", "build", ".venv", "venv", "vendor", "generated", "test", "tests", "__tests__", "spec"]
+  },
   "duplication": {
     "min_block_lines": 8,
     "min_occurrences": 2,

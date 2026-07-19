@@ -13,7 +13,14 @@ const MAINTAINABILITY_REL = ".claude/project/maintainability.json";
 const MANIFEST_REL = ".claude/harness-manifest.json";
 
 /** Controls introduced for maintainability sensors; always merge when missing. */
-const MAINTAINABILITY_CONTROL_IDS = Object.freeze(["file-size", "near-duplication"]);
+const MAINTAINABILITY_CONTROL_IDS = Object.freeze([
+  "file-size",
+  "function-size",
+  "exception-handling",
+  "logging-discipline",
+  "performance-heuristics",
+  "near-duplication",
+]);
 
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, "utf8"));

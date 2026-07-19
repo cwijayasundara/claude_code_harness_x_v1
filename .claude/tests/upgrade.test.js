@@ -76,7 +76,7 @@ test("mergeHarnessManifest adds file-size and near-duplication without clobberin
   assert.ok(merge.added_controls.includes("file-size"));
   assert.ok(merge.added_controls.includes("near-duplication"));
   assert.ok(merge.manifest.control_budget.baseline_ids.includes("file-size"));
-  assert.ok(merge.manifest.control_budget.max_active >= 14);
+  assert.ok(merge.manifest.control_budget.max_active >= 18);
   const secret = merge.manifest.controls.find((c) => c.id === "secret-scan");
   assert.equal(secret.owner, "Local security team");
   assert.ok(merge.manifest.controls.some((c) => c.id === "file-size"));

@@ -46,9 +46,11 @@ unexplained commands.
 
 ## Sensor admission and retirement
 
-Built-in computational sensors always available from `harness-sensors.js`:
-secret-scan, architecture-boundaries, **file-size**, and **near-duplication**
-(thresholds in `.claude/project/maintainability.json`).
+Built-in computational sensors always available from `harness-sensors.js`
+(**same set for vibe / outside-the-loop and `/harness` / on-the-loop**):
+secret-scan, architecture-boundaries, **file-size**, **function-size**,
+**exception-handling**, **logging-discipline**, **performance-heuristics**, and
+**near-duplication** (thresholds in `.claude/project/maintainability.json`).
 
 Add a sensor only for a recurring, observable failure. Before making it
 blocking, establish a small baseline and review:

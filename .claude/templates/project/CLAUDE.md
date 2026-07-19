@@ -33,11 +33,18 @@ versioned under `.claude/` and load only what the current task needs.
   the task requires it.
 - For behavior changes, add one focused failing test, implement the smallest
   passing change, and keep checks green while refactoring.
+- **Craft (vibe or harness):** functions ≤ 30 lines; files ≤ 300 lines; no empty
+  or bare exception swallow; structured logging on failure paths; avoid nested
+  full scans and string `+=` in loops. Thresholds live in
+  `.claude/project/maintainability.json`.
+- **Sensors always:** after any edit batch (including vibe/outside-the-loop), run
+  the plugin `harness-sensors.js` then `harness-status.js . --agent`. Prefer
+  `harness-sensor-watch.js` during long sessions.
+- **Vibe → harness:** when a spike graduates to a PR or permanent change, follow
+  `.claude/specs/vibe-to-harness.template.md` and `/harness` co-design.
 - Use fresh deterministic evidence before claiming completion. Escalate domain,
   security, privacy, lifecycle, or material architecture decisions to a human.
-- When a sensor watch session is active, use `harness-status.js . --agent`
-  after a batch of edits to read only actionable feedback and its correction path.
-- Never implement before the applicable G0-G4 human gates in
+- Never implement product delivery claims before the applicable G0-G4 human gates in
   `.claude/specs/index.json` are approved. Approved specifications are amended
   or superseded, never silently rewritten. Keep this guide short; put
   project-specific detail in its linked source of truth.

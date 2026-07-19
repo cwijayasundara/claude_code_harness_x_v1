@@ -9,7 +9,7 @@ const { loadSensorProfile, isApplicable } = require("../lib/sensor-profile");
 const { loadSensorProfileFile } = require("../lib/sensor-profile");
 const { checkBoundaries } = require("../lib/architecture-boundaries");
 const { scanSecrets } = require("../lib/secret-scan");
-const { checkFileSizes, checkNearDuplication } = require("../lib/maintainability-sensors");
+const { runAllMaintainabilitySensors } = require("../lib/maintainability-sensors");
 const { loadWaivers, applyWaiver } = require("../lib/sensor-waivers");
 const { redactEvidence } = require("../lib/evidence-hygiene");
 
@@ -231,27 +231,18 @@ record(createSensorResult({ sensorId: "architecture-boundaries", ...(boundaryChe
   evidence: ".claude/project/boundaries.json",
 }) }));
 
-const sizeCheck = checkFileSizes(root, inspectionPaths);
-record(createSensorResult({
-  sensorId: "file-size",
-  status: sizeCheck.status,
-  affectedPaths: sizeCheck.affectedPaths,
-  reason: sizeCheck.reason,
-  nextAction: sizeCheck.nextAction,
-  evidence: ".claude/project/maintainability.json (file_size) or built-in defaults",
-}));
-process.stdout.write(`${sizeCheck.status.toUpperCase().padEnd(5)} File size\n`);
-
-const dupeCheck = checkNearDuplication(root, inspectionPaths);
-record(createSensorResult({
-  sensorId: "near-duplication",
-  status: dupeCheck.status,
-  affectedPaths: dupeCheck.affectedPaths,
-  reason: dupeCheck.reason,
-  nextAction: dupeCheck.nextAction,
-  evidence: ".claude/project/maintainability.json (duplication) or built-in defaults",
-}));
-process.stdout.write(`${dupeCheck.status.toUpperCase().padEnd(5)} Near-duplication\n`);
+// Craft sensors always run (vibe / outside-the-loop and /harness alike).
+for (const { sensorId, label, result } of runAllMaintainabilitySensors(root, inspectionPaths)) {
+  record(createSensorResult({
+    sensorId,
+    status: result.status,
+    affectedPaths: result.affectedPaths,
+    reason: result.reason,
+    nextAction: result.nextAction,
+    evidence: `.claude/project/maintainability.json (${sensorId}) or built-in defaults`,
+  }));
+  process.stdout.write(`${result.status.toUpperCase().padEnd(5)} ${label}\n`);
+}
 
 const reportPath = path.join(root, ".claude", "specs", "evidence", "runtime", "sensor-report.json");
 fs.mkdirSync(path.dirname(reportPath), { recursive: true });

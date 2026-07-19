@@ -28,11 +28,14 @@ test("initializes a progressive-disclosure CLAUDE.md without overwriting it", ()
   const controlManifest = JSON.parse(fs.readFileSync(path.join(targetRoot, ".claude", "harness-manifest.json"), "utf8"));
   assert.equal(controlManifest.version, 1);
   assert.ok(controlManifest.controls.some((control) => control.id === "profile-verification"));
-  assert.equal(controlManifest.control_budget.max_active, 14);
+  assert.equal(controlManifest.control_budget.max_active, 18);
   assert.ok(controlManifest.control_budget.baseline_ids.includes("delivery-workflow"));
   assert.ok(controlManifest.control_budget.baseline_ids.includes("file-size"));
+  assert.ok(controlManifest.control_budget.baseline_ids.includes("function-size"));
+  assert.ok(controlManifest.control_budget.baseline_ids.includes("exception-handling"));
   assert.ok(controlManifest.control_budget.baseline_ids.includes("near-duplication"));
   assert.ok(fs.existsSync(path.join(targetRoot, ".claude", "project", "maintainability.json")));
+  assert.ok(fs.existsSync(path.join(targetRoot, ".claude", "specs", "vibe-to-harness.template.md")));
 
   fs.writeFileSync(guidePath, "# Existing project guide\n");
   const secondRun = initialize(targetRoot);
