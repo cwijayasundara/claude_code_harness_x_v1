@@ -1,0 +1,26 @@
+[
+  {
+    "pair_id": "ordinary-story-001",
+    "case_hash": "sha256-of-identical-story-context-and-evidence",
+    "route": "economical",
+    "accepted_first_pass": false,
+    "escaped_defects": 0,
+    "repair_count": 0,
+    "human_review_minutes": 0,
+    "elapsed_seconds": 0,
+    "context_tokens": 0,
+    "cost_usd": 0
+  },
+  {
+    "pair_id": "ordinary-story-001",
+    "case_hash": "sha256-of-identical-story-context-and-evidence",
+    "route": "strong",
+    "accepted_first_pass": false,
+    "escaped_defects": 0,
+    "repair_count": 0,
+    "human_review_minutes": 0,
+    "elapsed_seconds": 0,
+    "context_tokens": 0,
+    "cost_usd": 0
+  }
+]

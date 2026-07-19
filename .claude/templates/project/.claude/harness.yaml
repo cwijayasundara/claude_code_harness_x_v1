@@ -1,0 +1,25 @@
+# Select only the profiles and domain pack relevant to this repository.
+technology_profiles:
+  - python-fastapi
+  - react-typescript
+  # Enable only when the repository actually uses them; path/import signals
+  # still decide whether their guide enters a task context.
+  # - langchain
+  # - langgraph
+  # - deepagents
+  # - google-adk
+
+# Domain packs are private project assets. Do not put client data in the plugin.
+domain_pack: private-equity
+
+review:
+  max_automated_repair_attempts: 1
+
+# Model tiers, context budgets, promotion evidence, and observed spend ceilings
+# are governed in routing.json. Agent definitions use stable Claude aliases.
+
+optional_sensors:
+  playwright: disabled
+
+artifacts:
+  root: .claude/specs

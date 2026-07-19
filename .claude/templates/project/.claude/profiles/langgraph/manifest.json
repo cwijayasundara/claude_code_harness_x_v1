@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "id": "langgraph",
+  "layer": "framework",
+  "guide": "guide.md",
+  "requires": ["python"],
+  "extensions": [".py"],
+  "content_signals": ["from langgraph", "import langgraph", "stategraph("],
+  "path_signals": ["/graphs/", "/agents/", "graph.py"]
+}

@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "file_size": {
+    "max_lines": 300,
+    "warn_lines": 250,
+    "extensions": [".py", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".go", ".rs", ".java", ".kt"],
+    "ignore_path_parts": ["node_modules", ".git", "dist", "build", ".venv", "venv", "vendor", "generated"]
+  },
+  "duplication": {
+    "min_block_lines": 8,
+    "min_occurrences": 2,
+    "severity": "warn",
+    "max_findings": 20,
+    "extensions": [".py", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".go", ".rs", ".java", ".kt"],
+    "ignore_path_parts": ["node_modules", ".git", "dist", "build", ".venv", "venv", "vendor", "generated", "test", "tests", "__tests__"]
+  }
+}

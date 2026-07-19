@@ -1,0 +1,8 @@
+# Add approved states and legal transitions here.
+# Example:
+# capital_call:
+#   states: [draft, approved, issued, settled, cancelled]
+#   transitions:
+#     draft: [approved, cancelled]
+#     approved: [issued, cancelled]
+#     issued: [settled, cancelled]

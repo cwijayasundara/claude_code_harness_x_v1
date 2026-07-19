@@ -1,0 +1,25 @@
+{
+  "id": "CHANGE-001-change-strategy",
+  "package": "brownfield",
+  "change_id": "CHANGE-001",
+  "source_ids": ["CHANGE-001-source"],
+  "source_locations": ["requirements/change-request.md"],
+  "derived_from": ["CHANGE-001-code-map"],
+  "status": "draft",
+  "assumptions": [],
+  "open_questions": [],
+  "human_approver": null,
+  "approved_at": null,
+  "content": {
+    "artifact_type": "change-strategy",
+    "smallest_behavioral_seam": "",
+    "second_slice_decision": "reuse-existing",
+    "divergence_justification": null,
+    "reuse": [],
+    "duplication_risks": [],
+    "compatibility_contracts": [],
+    "characterization_tests": [],
+    "regression_scope": [],
+    "migration_and_rollback": []
+  }
+}

@@ -1,0 +1,27 @@
+sensors:
+  - id: python-format-lint
+    label: Python format and lint
+    command: ruff
+    args: ["check", "."]
+    extensions: [".py"]
+  - id: python-type-check
+    label: Python type check
+    command: pyright
+    args: ["."]
+    extensions: [".py"]
+  - id: python-tests
+    label: Python tests
+    command: pytest
+    args: ["."]
+    extensions: [".py"]
+  - id: python-dependency-audit
+    label: Python dependency audit
+    command: pip-audit
+    args: ["-r", "requirements.txt"]
+    extensions: [".txt", ".toml", ".lock"]
+    require_file: requirements.txt
+  - id: python-sast
+    label: Python static security analysis
+    command: semgrep
+    args: ["scan", "--config", "auto", "--error", "."]
+    extensions: [".py"]

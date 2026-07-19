@@ -1,0 +1,30 @@
+{
+  "id": "CHANGE-001-story-001-contract",
+  "package": "plans",
+  "change_id": "CHANGE-001",
+  "source_ids": ["CHANGE-001-source"],
+  "source_locations": ["requirements/prd.md#acceptance-criteria"],
+  "derived_from": ["CHANGE-001-story-001"],
+  "status": "draft",
+  "assumptions": [],
+  "open_questions": [],
+  "human_approver": null,
+  "approved_at": null,
+  "content": {
+    "story_id": "CHANGE-001-story-001",
+    "source_requirements": ["REQ-001"],
+    "approved_design_refs": ["CHANGE-001-design"],
+    "dependency_story_ids": [],
+    "allowed_change_scope": ["src/feature", "tests/feature"],
+    "acceptance_criteria": ["AC-001"],
+    "test_case_ids": ["TC-001"],
+    "test_data_ids": [],
+    "required_sensors": ["secret-scan", "architecture-boundaries"],
+    "performance_budgets": [],
+    "routing_risks": [],
+    "human_decisions": [],
+    "implementation_posture": "first-slice",
+    "reuse_targets": [],
+    "divergence_justification": null
+  }
+}

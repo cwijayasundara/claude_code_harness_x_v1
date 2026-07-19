@@ -1,0 +1,9 @@
+{
+  "verdict": "pass",
+  "blocking_findings": [],
+  "non_blocking_findings": [],
+  "missing_or_stale_evidence": [],
+  "required_human_decisions": [],
+  "reviewed_paths": ["src/feature/story.py", "tests/feature/test_story.py"],
+  "evidence_refs": [".claude/specs/evidence/implementation.json"]
+}

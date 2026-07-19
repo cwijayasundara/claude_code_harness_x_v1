@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "id": "langchain",
+  "layer": "framework",
+  "guide": "guide.md",
+  "requires": ["python"],
+  "extensions": [".py"],
+  "content_signals": ["from langchain", "import langchain", "langchain_"],
+  "path_signals": ["/chains/", "/tools/", "/retrievers/"]
+}

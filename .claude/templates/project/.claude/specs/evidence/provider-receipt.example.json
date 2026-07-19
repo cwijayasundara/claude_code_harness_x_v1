@@ -1,0 +1,13 @@
+{
+  "change_id": "CHANGE-001",
+  "story_id": "CHANGE-001-story-001",
+  "role": "sidekick",
+  "model": "sonnet",
+  "provider": "anthropic",
+  "provider_session_id": "replace-with-provider-or-session-id",
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "cost_usd": 0,
+  "elapsed_seconds": 0,
+  "evidence_path": ".claude/specs/evidence/provider-session-export.json"
+}

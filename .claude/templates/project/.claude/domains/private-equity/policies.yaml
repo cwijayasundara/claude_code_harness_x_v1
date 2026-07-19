@@ -1,0 +1,5 @@
+# Define approved policies, limits, approval requirements, and retention constraints.
+# Example:
+# capital_call_approval:
+#   required_role: fund_administrator
+#   approval_before: issued

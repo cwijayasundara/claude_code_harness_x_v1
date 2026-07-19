@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "id": "python",
+  "layer": "language",
+  "guide": "guide.md",
+  "requires": [],
+  "extensions": [".py", ".pyi"],
+  "content_signals": [],
+  "path_signals": []
+}

@@ -1,0 +1,22 @@
+{
+  "id": "CHANGE-001-baseline",
+  "package": "brownfield",
+  "change_id": "CHANGE-001",
+  "source_ids": ["CHANGE-001-source"],
+  "source_locations": ["requirements/change-request.md"],
+  "derived_from": [],
+  "status": "draft",
+  "assumptions": [],
+  "open_questions": [],
+  "human_approver": null,
+  "approved_at": null,
+  "content": {
+    "artifact_type": "baseline",
+    "commands": [{ "command": "replace with exact command", "exit_code": null, "result": "not-run" }],
+    "known_failures": [],
+    "protected_interfaces": [],
+    "compatibility_constraints": [],
+    "migration_risks": [],
+    "test_gaps": []
+  }
+}

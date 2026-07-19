@@ -1,0 +1,30 @@
+sensors:
+  - id: typescript-type-check
+    label: TypeScript check
+    command: npm
+    args: ["run", "typecheck"]
+    extensions: [".ts", ".tsx", ".js", ".jsx"]
+    require_script: typecheck
+  - id: frontend-lint
+    label: Frontend lint
+    command: npm
+    args: ["run", "lint"]
+    extensions: [".ts", ".tsx", ".js", ".jsx"]
+    require_script: lint
+  - id: frontend-tests
+    label: Frontend tests
+    command: npm
+    args: ["test", "--", "--run"]
+    extensions: [".ts", ".tsx", ".js", ".jsx"]
+    require_script: test
+  - id: frontend-dependency-audit
+    label: Frontend dependency audit
+    command: npm
+    args: ["audit", "--omit=dev", "--audit-level=high"]
+    extensions: [".json"]
+    require_file: package-lock.json
+  - id: frontend-sast
+    label: Frontend static security analysis
+    command: semgrep
+    args: ["scan", "--config", "auto", "--error", "."]
+    extensions: [".ts", ".tsx", ".js", ".jsx"]

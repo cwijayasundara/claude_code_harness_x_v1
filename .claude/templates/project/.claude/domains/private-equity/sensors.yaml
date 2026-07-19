@@ -1,0 +1,10 @@
+# Domain sensors are executable checks linked to approved invariant ids.
+# Example:
+#   - id: capital-call-invariants
+#     label: Capital-call invariant tests
+#     command: pytest
+#     args: ["tests/domain/test_capital_calls.py"]
+#     extensions: [".py"]
+#     invariants: ["capital-call-not-above-unfunded-commitment"]
+# Add only approved checks; leave empty until a project supplies the command.
+sensors: []

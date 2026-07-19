@@ -1,0 +1,6 @@
+# Add only approved, executable domain invariants.
+# Example:
+# - id: capital-call-not-above-unfunded-commitment
+#   statement: A capital call amount must not exceed the investor's unfunded commitment.
+#   owner: domain-owner
+#   test_fixture: tests/domain/capital_call_examples.yaml

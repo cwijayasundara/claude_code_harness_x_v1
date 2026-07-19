@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "id": "typescript",
+  "layer": "language",
+  "guide": "guide.md",
+  "requires": [],
+  "extensions": [".ts", ".tsx", ".js", ".jsx", ".mts", ".cts"],
+  "content_signals": [],
+  "path_signals": []
+}

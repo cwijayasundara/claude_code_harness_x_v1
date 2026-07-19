@@ -1,0 +1,7 @@
+{
+  "command": "replace with exact focused passing test command",
+  "exit_code": 0,
+  "changed_paths": ["src/feature/story.py"],
+  "test_paths": ["tests/feature/test_story.py"],
+  "result": "Focused test passed after the smallest implementation and refactor"
+}

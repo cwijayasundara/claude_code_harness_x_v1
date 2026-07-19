@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "id": "deepagents",
+  "layer": "framework",
+  "guide": "guide.md",
+  "requires": ["python"],
+  "extensions": [".py"],
+  "content_signals": ["from deepagents", "import deepagents", "create_deep_agent"],
+  "path_signals": ["/deep_agents/", "/deepagents/"]
+}

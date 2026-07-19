@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-19T08:33:17.538Z",
+  "measurement_type": "synthetic-deterministic-release-canary",
+  "status": "pass",
+  "elapsed_ms": 1968,
+  "scenarios": [
+    {
+      "name": "greenfield",
+      "type": "greenfield",
+      "status": "pass",
+      "elapsed_ms": 947,
+      "story_state": "STORY_VERIFIED",
+      "pre_pr_status": "pass",
+      "context_estimated_tokens": 24,
+      "context_budget_tokens": 24000,
+      "route": "evaluator-strong",
+      "repair_count": 0,
+      "sensor_probe": {
+        "injected_failure_detected": true,
+        "correction_passed": true
+      },
+      "graph": null
+    },
+    {
+      "name": "brownfield",
+      "type": "brownfield",
+      "status": "pass",
+      "elapsed_ms": 872,
+      "story_state": "STORY_VERIFIED",
+      "pre_pr_status": "pass",
+      "context_estimated_tokens": 24,
+      "context_budget_tokens": 24000,
+      "route": "evaluator-strong",
+      "repair_count": 0,
+      "sensor_probe": {
+        "injected_failure_detected": true,
+        "correction_passed": true
+      },
+      "graph": {
+        "source_files": 2,
+        "impact_candidates": 4,
+        "adapter": "none"
+      }
+    }
+  ],
+  "controlled_measures": {
+    "first_pass_contract_acceptance": 1,
+    "injected_sensor_detection_rate": 1,
+    "sensor_correction_pass_rate": 1,
+    "repair_count": 0,
+    "context_loaded_tokens": 48
+  },
+  "real_pilot_measures_required": [
+    "human_review_minutes",
+    "escaped_defects",
+    "sensor_precision_and_correction",
+    "provider_cost_per_accepted_story",
+    "production_graph_retrieval_value"
+  ],
+  "limitations": [
+    "Synthetic canaries prove deterministic control integration, not model quality, human review time, provider cost, or production defect escape."
+  ]
+}

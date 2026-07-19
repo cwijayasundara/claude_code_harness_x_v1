@@ -1,0 +1,5 @@
+# Define approved entities and relationships; keep client-specific values out of templates.
+# Example:
+# capital_call:
+#   relates_to: [fund, investor, commitment]
+#   attributes: [amount, due_date, state]

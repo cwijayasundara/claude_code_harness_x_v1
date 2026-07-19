@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "id": "google-adk",
+  "layer": "framework",
+  "guide": "guide.md",
+  "requires": ["python"],
+  "extensions": [".py"],
+  "content_signals": ["google.adk", "from google import adk", "from google.adk"],
+  "path_signals": ["/adk/", "/agents/"]
+}

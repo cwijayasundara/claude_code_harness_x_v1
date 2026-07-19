@@ -1,0 +1,6 @@
+# Define data sensitivity and handling requirements.
+# Do not record personal, deal, or credential values in this file.
+# Example:
+# investor_tax_identifier:
+#   classification: confidential
+#   frontend_exposure: prohibited

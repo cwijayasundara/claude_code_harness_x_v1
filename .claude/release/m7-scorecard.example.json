@@ -1,0 +1,170 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-19T17:19:45.255Z",
+  "measurement_type": "m7-release-and-pilot-scorecard",
+  "decision_authority": "human",
+  "never_auto_merges": true,
+  "never_auto_rollouts": true,
+  "synthetic": {
+    "measurement_type": "synthetic-deterministic-canaries",
+    "required": [
+      "harness-lived-canary.js",
+      "harness-multi-story-canary.js",
+      "harness-brownfield-canary.js",
+      "harness-routing-canary.js",
+      "harness-p7-canary.js"
+    ],
+    "limitations": [
+      "Synthetic canaries prove control integration only.",
+      "They do not measure human review time, escaped production defects, provider cost quality, or real graph value."
+    ],
+    "status": "pass"
+  },
+  "harness": {
+    "status": "synthetic-controls-ready",
+    "control_budget": {
+      "active": 11,
+      "max_active": 14,
+      "baseline": 11,
+      "net_adds": [],
+      "headroom": 3
+    },
+    "subtraction_summary": {
+      "total": 1,
+      "blocking_candidates": 0,
+      "advisory": 1
+    }
+  },
+  "pilot": {
+    "schema_version": 1,
+    "generated_at": "2026-07-19T17:19:45.254Z",
+    "status": "insufficient-evidence",
+    "decision_authority": "human",
+    "policy": {
+      "schema_version": 1,
+      "minimum_pilots": {
+        "greenfield": 3,
+        "brownfield": 3
+      },
+      "minimum_observation_days": 14,
+      "thresholds": {
+        "minimum_first_pass_acceptance_rate": 0.8,
+        "maximum_mean_human_review_minutes": 30,
+        "maximum_escaped_defects_per_accepted_story": 0.1,
+        "minimum_sensor_precision": 0.8,
+        "minimum_sensor_correction_rate": 0.9,
+        "maximum_mean_provider_cost_per_accepted_story_usd": 5,
+        "minimum_brownfield_graph_useful_rate": 0.6
+      }
+    },
+    "metrics": {
+      "pilot_counts": {
+        "greenfield": 0,
+        "brownfield": 0
+      },
+      "first_pass_acceptance_rate": null,
+      "mean_human_review_minutes": null,
+      "escaped_defects_per_accepted_story": null,
+      "sensor_precision": null,
+      "sensor_correction_rate": null,
+      "mean_provider_cost_per_accepted_story_usd": null,
+      "brownfield_graph_useful_rate": null
+    },
+    "checks": [
+      {
+        "id": "minimum_greenfield_pilots",
+        "pass": false,
+        "actual": 0,
+        "required": 3
+      },
+      {
+        "id": "minimum_brownfield_pilots",
+        "pass": false,
+        "actual": 0,
+        "required": 3
+      },
+      {
+        "id": "observation_window",
+        "pass": false,
+        "actual": 0,
+        "required": 14
+      },
+      {
+        "id": "first_pass_acceptance",
+        "pass": false,
+        "actual": null,
+        "required": 0.8
+      },
+      {
+        "id": "human_review",
+        "pass": false,
+        "actual": null,
+        "required": 30
+      },
+      {
+        "id": "escaped_defects",
+        "pass": false,
+        "actual": null,
+        "required": 0.1
+      },
+      {
+        "id": "sensor_precision",
+        "pass": false,
+        "actual": null,
+        "required": 0.8
+      },
+      {
+        "id": "sensor_correction",
+        "pass": false,
+        "actual": null,
+        "required": 0.9
+      },
+      {
+        "id": "provider_cost",
+        "pass": false,
+        "actual": null,
+        "required": 5
+      },
+      {
+        "id": "graph_value",
+        "pass": false,
+        "actual": null,
+        "required": 0.6
+      }
+    ]
+  },
+  "subtraction": {
+    "schema_version": 1,
+    "generated_at": "2026-07-19T17:19:45.255Z",
+    "as_of": "2026-07-19T17:19:45.253Z",
+    "decision_authority": "human",
+    "applies_automatically": false,
+    "sensor_outcomes_available": false,
+    "proposals": [
+      {
+        "control_id": "*",
+        "action": "enable-outcome-ledger",
+        "severity": "advisory",
+        "reason": "No .claude/state/sensor-outcomes.jsonl yet; zero-fire retirement cannot be data-driven until outcomes are recorded.",
+        "evidence": {
+          "ledger": "/var/folders/m_/tqtx1ykn03l97jvspxx7wc640000gn/T/harness-m7-release-wJS7rh/.claude/state/sensor-outcomes.jsonl"
+        }
+      }
+    ],
+    "summary": {
+      "total": 1,
+      "blocking_candidates": 0,
+      "advisory": 1
+    }
+  },
+  "rollout": {
+    "status": "insufficient-evidence",
+    "decision_authority": "human",
+    "note": "Record ≥3 greenfield and ≥3 brownfield real pilots with observation windows before rollout eligibility."
+  },
+  "next_actions": [
+    "Run real greenfield/brownfield pilots and record them with harness-pilot.js record.",
+    "Review subtraction proposals via /harness-retro; retire or justify each nominated control.",
+    "Keep release-check green (lived + brownfield + routing + P7 canaries)."
+  ]
+}

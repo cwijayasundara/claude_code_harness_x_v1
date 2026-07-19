@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "minimum_pilots": { "greenfield": 3, "brownfield": 3 },
+  "minimum_observation_days": 14,
+  "thresholds": {
+    "minimum_first_pass_acceptance_rate": 0.8,
+    "maximum_mean_human_review_minutes": 30,
+    "maximum_escaped_defects_per_accepted_story": 0.1,
+    "minimum_sensor_precision": 0.8,
+    "minimum_sensor_correction_rate": 0.9,
+    "maximum_mean_provider_cost_per_accepted_story_usd": 5,
+    "minimum_brownfield_graph_useful_rate": 0.6
+  }
+}

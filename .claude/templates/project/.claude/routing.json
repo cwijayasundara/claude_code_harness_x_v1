@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "models": {
+    "sidekick": { "model": "sonnet", "purpose": "bounded implementation and one repair" },
+    "evaluator-economical": { "model": "haiku", "purpose": "ordinary story validation only after promotion" },
+    "evaluator-strong": { "model": "opus", "purpose": "risk-triggered and branch validation" }
+  },
+  "context_budgets": {
+    "sidekick": 16000,
+    "evaluator-economical": 12000,
+    "evaluator-strong": 24000
+  },
+  "cost": {
+    "story_usd_ceiling": 5,
+    "change_usd_ceiling": 25,
+    "enforcement": "receipt-observed",
+    "provider_limit_reference": null
+  },
+  "economical_evaluator_promotion": {
+    "enabled": false,
+    "minimum_matched_samples": 20,
+    "max_review_minutes_increase": 0,
+    "comparison_file": ".claude/specs/evidence/model-routing-comparison.json"
+  }
+}

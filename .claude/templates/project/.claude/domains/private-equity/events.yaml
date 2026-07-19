@@ -1,0 +1,4 @@
+# Define business events that must be visible to integrations, audit trails, or downstream systems.
+# Example:
+# capital_call_issued:
+#   emitted_when: state changes from approved to issued

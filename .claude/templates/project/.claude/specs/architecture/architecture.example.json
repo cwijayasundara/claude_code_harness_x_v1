@@ -1,0 +1,53 @@
+{
+  "id": "CHANGE-001-architecture",
+  "package": "architecture",
+  "change_id": "CHANGE-001",
+  "source_ids": ["CHANGE-001-source"],
+  "source_locations": ["requirements/prd.md#constraints"],
+  "derived_from": ["CHANGE-001-design"],
+  "status": "draft",
+  "assumptions": [],
+  "open_questions": [],
+  "human_approver": null,
+  "approved_at": null,
+  "content": {
+    "structural_alternatives": [
+      {
+        "id": "clone-vertical",
+        "summary": "Independent vertical stack per feature/entity (own modules and copied flow).",
+        "duplication_risk": "high",
+        "pros": ["Fast first delivery"],
+        "cons": ["Copy-paste drift", "Parallel bug fixes"]
+      },
+      {
+        "id": "shared-modules",
+        "summary": "Thin feature entrypoints call shared helpers without a single orchestrating spine.",
+        "duplication_risk": "medium",
+        "pros": ["Low ceremony", "Clear ownership of helpers"],
+        "cons": ["Flow skeletons can still diverge"]
+      },
+      {
+        "id": "parameterized-spine",
+        "summary": "One parameterized flow (stages + config/strategy per variant). Stack-agnostic — modules, workers, or a graph runtime may implement it later.",
+        "duplication_risk": "low",
+        "pros": ["Single place for gate/control-flow fixes", "Variants are config/strategy"],
+        "cons": ["Up-front seam design cost"]
+      }
+    ],
+    "selected_alternative_id": "parameterized-spine",
+    "selection_rationale": "Multiple near-identical capabilities share the same skeleton; only policies differ. Choose spine shape first; technology later.",
+    "second_slice_reuse_policy": {
+      "when": "second-similar-capability",
+      "required_action": "reuse-existing-seams-or-design-amendment",
+      "generalize_min_uses": 2
+    },
+    "evolutionary_rules": [
+      "Second similar capability reuses approved seams or opens a design amendment.",
+      "Generalize only when at least two real uses share stable behaviour.",
+      "Dependency direction is enforced by .claude/project/boundaries.json sensors."
+    ],
+    "dependency_direction": [],
+    "performance_budgets": [],
+    "folder_structure_refs": ["CHANGE-001-design"]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "id": "react-typescript",
+  "layer": "framework",
+  "guide": "guide.md",
+  "requires": ["typescript"],
+  "extensions": [".ts", ".tsx", ".js", ".jsx"],
+  "content_signals": ["from 'react'", "from \"react\"", "react.", "usestate(", "useeffect("],
+  "path_signals": ["/components/", "/hooks/", ".tsx", "/pages/", "/app/"]
+}

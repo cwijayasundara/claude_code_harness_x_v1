@@ -1,0 +1,17 @@
+{
+  "id": "CHANGE-001-story-001",
+  "package": "stories",
+  "change_id": "CHANGE-001",
+  "source_ids": ["CHANGE-001-source"],
+  "source_locations": ["requirements/prd.md#user-outcome"],
+  "derived_from": [],
+  "status": "draft",
+  "assumptions": [],
+  "open_questions": [],
+  "human_approver": null,
+  "approved_at": null,
+  "content": {
+    "title": "Replace with a concise story",
+    "acceptance_criteria": ["AC-001: Replace with observable behaviour"]
+  }
+}

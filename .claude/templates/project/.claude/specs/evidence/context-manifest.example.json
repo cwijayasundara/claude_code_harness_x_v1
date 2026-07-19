@@ -1,0 +1,10 @@
+{
+  "story_id": "CHANGE-001-story-001",
+  "items": [
+    { "path": ".claude/specs/source/CHANGE-001/prd.md", "kind": "source-requirement", "priority": 100, "required": true },
+    { "path": ".claude/specs/design/CHANGE-001-design.json", "kind": "approved-decision", "priority": 100, "required": true },
+    { "path": "src/feature/service.py", "kind": "code", "priority": 80, "required": true },
+    { "path": "tests/feature/test_service.py", "kind": "test", "priority": 80, "required": true },
+    { "path": ".claude/specs/evidence/logs/verbose.log", "kind": "tool-output", "priority": 10, "required": false }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "pilot_id": "pilot-001",
+  "change_id": "change-001",
+  "scenario_type": "greenfield",
+  "completed_at": "2026-07-19T12:00:00.000Z",
+  "reviewer": "human reviewer",
+  "outcome": "accepted",
+  "first_pass_accepted": true,
+  "story_count": 1,
+  "human_review_minutes": 20,
+  "escaped_defects": 0,
+  "observation_days": 14,
+  "sensor_findings": 1,
+  "sensor_true_positives": 1,
+  "sensor_findings_corrected": 1,
+  "provider_cost_usd": 1.25,
+  "evidence_refs": [
+    { "label": "branch-readiness", "path": ".claude/specs/evidence/change-001-branch-readiness.json" },
+    { "label": "human-review", "path": ".claude/specs/reviews/change-001-review.json" },
+    { "label": "defect-observation", "path": ".claude/specs/evidence/change-001-observation.json" },
+    { "label": "sensor-assessment", "path": ".claude/specs/evidence/change-001-sensor-assessment.json" },
+    { "label": "provider-receipt", "path": ".claude/specs/evidence/provider-receipt.json" }
+  ],
+  "residual_risks": []
+}

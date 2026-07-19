@@ -1,0 +1,25 @@
+{
+  "id": "CHANGE-001-design-amendment",
+  "package": "amendments",
+  "change_id": "CHANGE-001",
+  "source_ids": ["CHANGE-001-source"],
+  "source_locations": ["requirements/change-request.md"],
+  "derived_from": ["CHANGE-001-change-strategy"],
+  "status": "draft",
+  "assumptions": [],
+  "open_questions": [],
+  "human_approver": null,
+  "approved_at": null,
+  "content": {
+    "artifact_type": "design-amendment",
+    "current_design": "",
+    "proposed_delta": "",
+    "reason": "",
+    "alternatives": [
+      "Clone the existing vertical stack for the new variant",
+      "Reuse shared modules / helpers",
+      "Extend the parameterized spine with a new strategy/config"
+    ],
+    "decision": ""
+  }
+}

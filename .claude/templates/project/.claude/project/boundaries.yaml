@@ -1,0 +1,3 @@
+# Human-facing architecture notes belong here.
+# Executable import-boundary rules live in boundaries.json so the harness can
+# validate them deterministically without a general YAML parser.

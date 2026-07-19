@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "change_id": "CHANGE-001",
+  "cadence": "pre-pr",
+  "branch": "feature/change-001",
+  "generated_at": "",
+  "changed_paths": [],
+  "status": "pass",
+  "checks": [],
+  "performance": [],
+  "requirements": [],
+  "stories": [],
+  "residual_risks": []
+}

@@ -1,0 +1,7 @@
+{
+  "command": "replace with exact focused test command",
+  "exit_code": 1,
+  "expected_failure": "Describe the missing behavior expected to fail",
+  "observed_failure": "Describe the actual matching failure",
+  "test_paths": ["tests/feature/test_story.py"]
+}

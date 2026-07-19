@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "id": "python-fastapi",
+  "layer": "framework",
+  "guide": "guide.md",
+  "requires": ["python"],
+  "extensions": [".py", ".pyi"],
+  "content_signals": ["from fastapi", "import fastapi", "apirouter", "fastapi("],
+  "path_signals": ["/routers/", "/api/", "/endpoints/", "main.py"]
+}

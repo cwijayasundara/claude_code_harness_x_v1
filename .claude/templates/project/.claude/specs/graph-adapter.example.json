@@ -1,0 +1,32 @@
+{
+  "provider": "graphify",
+  "notes": "Export only the bounded task-relevant subgraph from Graphify/CCE/LSP. The harness imports this file; it does not run a graph engine. Every edge requires provenance.method and provenance.confidence (extracted|inferred|projected).",
+  "nodes": [
+    {
+      "id": "file:src/example.js",
+      "kind": "file",
+      "path": "src/example.js"
+    },
+    {
+      "id": "symbol:example:run",
+      "kind": "function",
+      "name": "run",
+      "path": "src/example.js",
+      "provenance": {
+        "method": "graphify-ast",
+        "confidence": "extracted"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "from": "file:src/example.js",
+      "to": "symbol:example:run",
+      "type": "declares",
+      "provenance": {
+        "method": "graphify-ast",
+        "confidence": "extracted"
+      }
+    }
+  ]
+}
