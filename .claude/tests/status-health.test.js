@@ -73,3 +73,32 @@ test("status surfaces a story completion contract and feedback provenance", () =
   assert.match(output, /red_test=deterministic-test/);
   assert.match(output, /validator=independent-evaluator/);
 });
+
+test("status leads with a concise active-work dashboard and preserves full detail", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "harness-workflow-status-"));
+  execFileSync(process.execPath, [initializer, root], { cwd: pluginRoot, stdio: "ignore" });
+  execFileSync("git", ["init", "-q", root]);
+  execFileSync("git", ["-C", root, "config", "user.email", "test@example.com"]);
+  execFileSync("git", ["-C", root, "config", "user.name", "Harness Test"]);
+  execFileSync("git", ["-C", root, "add", "."]);
+  execFileSync("git", ["-C", root, "commit", "-qm", "scaffold"]);
+  execFileSync("git", ["-C", root, "switch", "-qc", "feature/status"]);
+  const indexPath = path.join(root, ".claude", "specs", "index.json");
+  const index = JSON.parse(fs.readFileSync(indexPath, "utf8"));
+  index.changes["US-142"] = {
+    branch: "feature/status", source_ids: [], gates: {}, workflow: {
+      entry_kind: "story", target: "draft-pr", interaction_mode: "checkpoint",
+      repository_posture: "brownfield", delivery_lane: "bounded-change",
+      classification_confidence: "high", classification_rationale: ["Explicit story"], material_questions: [],
+      current_checkpoint: "product", state: "active", next_action: "cached", created_at: "2026-07-20T00:00:00Z", updated_at: "2026-07-20T00:00:00Z",
+    },
+  };
+  fs.writeFileSync(indexPath, `${JSON.stringify(index, null, 2)}\n`);
+  const concise = execFileSync(process.execPath, [status, root], { cwd: pluginRoot, encoding: "utf8" });
+  assert.match(concise, /Change: US-142/);
+  assert.match(concise, /Route: brownfield bounded-change/);
+  assert.match(concise, /Next: Prepare or review the grounded intent \(G0\)/);
+  assert.doesNotMatch(concise, /Real-pilot readiness/);
+  const full = execFileSync(process.execPath, [status, root, "--full"], { cwd: pluginRoot, encoding: "utf8" });
+  assert.match(full, /Real-pilot readiness/);
+});

@@ -35,9 +35,9 @@ only profiles supported by the codebase.
 
 1. Create or switch to a feature branch. The harness refuses specification and
    implementation writes on `main`, `master`, and `develop`.
-2. Put the request in a durable local file such as
-   `requirements/change-name.md`. A short direct BRD is supported; larger or
-   ambiguous changes should use a PRD.
+2. Start from the artifact you actually have: idea, PRD, BRD, feature, epic,
+   story, issue, design, tests, or existing diff. Put PRD/BRD authority and any
+   reusable request in a durable local file such as `requirements/change-name.md`.
 3. Start Claude Code with the plugin enabled:
 
    ```sh
@@ -47,10 +47,18 @@ only profiles supported by the codebase.
 4. Start delivery in Claude Code:
 
    ```text
-   /lean-expert-generalist-harness:harness "deliver requirements/change-name.md"
+   /lean-expert-generalist-harness:harness "Deliver requirements/change-name.md"
+   /lean-expert-generalist-harness:harness "Implement requirements/US-142.md"
+   /lean-expert-generalist-harness:harness "Add invoice export"
+   /lean-expert-generalist-harness:harness "Continue"
    ```
 
-5. Review each proposed gate before approving it:
+   The harness infers the entry kind, stopping point, repository posture,
+   delivery lane, and interaction mode. Use `guided`, `checkpoint` (default),
+   or `unattended`; unattended execution requires an already approved contract.
+
+5. Review each proposed product or solution decision before approving it. The
+   evidence remains recorded through these internal gates:
 
    - G0 confirms the source and intended outcome.
    - G1 confirms epics, stories, estimates, dependencies, and delivery order.

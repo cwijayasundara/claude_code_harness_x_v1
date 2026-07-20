@@ -16,7 +16,7 @@ const {
 } = require("./proposal-sessions");
 
 const PACKAGES = [
-  "source", "brd", "prd", "analysis", "reasons-canvas", "prompt-amendments",
+  "source", "intents", "brd", "prd", "analysis", "reasons-canvas", "prompt-amendments",
   "epics", "stories", "dependencies", "allocations", "traceability", "tracker-projections", "test-data",
   "test-cases", "test-plans", "design", "architecture", "plans", "evidence",
   "reviews", "brownfield", "amendments",
@@ -36,6 +36,7 @@ const GATE_PREDECESSOR = { G1: "G0", G2: "G1", G3: "G2", G4: "G3", B1: "B0", B2:
 const BROWNFIELD_TYPES = { B0: "baseline", B1: "code-map", B2: "change-strategy" };
 const PROTECTED_BRANCHES = new Set(["main", "master", "develop"]);
 const GREENFIELD_GATE_ORDER = Object.freeze(["G0", "G1", "G2", "G3", "G4"]);
+const CHECKPOINT_GATES = Object.freeze({ product: ["G0", "G1"], solution: ["G2", "G3", "G4"] });
 
 function sha256(buffer) {
   return crypto.createHash("sha256").update(buffer).digest("hex");
@@ -91,7 +92,8 @@ function loadIndex(root) {
 
 function intake(root, { changeId, source, kind }) {
   assertId(changeId, "change id");
-  if (!["brd", "prd"].includes(kind)) throw new Error("kind must be brd or prd.");
+  const sourceKinds = ["idea", "prd", "brd", "feature", "epic", "story", "issue", "design", "tests", "diff"];
+  if (!sourceKinds.includes(kind)) throw new Error(`kind must be one of: ${sourceKinds.join(", ")}.`);
   const branch = currentBranch(root);
   const projectRoot = path.resolve(root);
   const sourcePath = path.resolve(projectRoot, source);
@@ -389,7 +391,7 @@ function summarizeContent(content) {
  * Build a human-readable co-design proposal pack for one gate.
  * Present this to the human before recording approval.
  */
-function proposalPack(root, { changeId, gate, write = false }) {
+function proposalPack(root, { changeId, gate, write = false, assumedApprovedGates = [] }) {
   assertId(changeId, "change id");
   if (!GATES.includes(gate)) throw new Error(`gate must be one of ${GATES.join(", ")}.`);
   const branch = currentBranch(root);
@@ -410,7 +412,7 @@ function proposalPack(root, { changeId, gate, write = false }) {
       || (item.artifact_type || item.content?.artifact_type) === requiredBrownfieldType);
 
   const predecessor = GATE_PREDECESSOR[gate];
-  const predecessorOk = !predecessor || Boolean(change.gates[predecessor]);
+  const predecessorOk = !predecessor || Boolean(change.gates[predecessor]) || assumedApprovedGates.includes(predecessor);
   const missingPackages = requiredPackages.filter(
     (packageName) => !changeArtifacts.some((item) => qualifies(item, packageName))
   );
@@ -591,13 +593,81 @@ function proposalPack(root, { changeId, gate, write = false }) {
   };
 }
 
+function checkpointPack(root, { changeId, checkpoint, write = false }) {
+  const gates = CHECKPOINT_GATES[checkpoint];
+  if (!gates) throw new Error(`checkpoint must be one of: ${Object.keys(CHECKPOINT_GATES).join(", ")}.`);
+  const assumed = [];
+  const packs = gates.map((gate) => {
+    const pack = proposalPack(root, { changeId, gate, assumedApprovedGates: assumed });
+    if (pack.ready || pack.already_approved) assumed.push(gate);
+    return pack;
+  });
+  const blocking = packs.flatMap((pack) => pack.already_approved ? [] : pack.blocking.map((item) => `${pack.gate}: ${item}`));
+  const ready = packs.every((pack) => pack.ready || pack.already_approved);
+  const title = checkpoint === "product" ? "Are we building the right thing?" : "Are we building it the right way?";
+  const lines = [
+    `# ${checkpoint[0].toUpperCase()}${checkpoint.slice(1)} checkpoint: ${changeId}`,
+    "",
+    `## ${title}`,
+    "",
+    `- **Ready for one human decision:** ${ready ? "yes" : "no"}`,
+    `- **Constituent gates:** ${gates.join(", ")}`,
+    "",
+  ];
+  if (blocking.length) lines.push("## Blocking issues", "", ...blocking.map((item) => `- ${item}`), "");
+  for (const pack of packs) lines.push("---", "", pack.markdown);
+  lines.push(
+    "---", "", "## Checkpoint decision", "",
+    "Approving this checkpoint records the same explicit human decision against every constituent gate. It never authorizes merge or deployment.", "",
+    "```sh",
+    `node "$CLAUDE_PLUGIN_ROOT/scripts/harness-specs.js" checkpoint-approve --change ${changeId} --checkpoint ${checkpoint} --approver <your-name> --root .`,
+    "```", "",
+  );
+  const markdown = `${lines.join("\n")}\n`;
+  let writtenPath = null;
+  if (write) {
+    writtenPath = path.join(".claude", "specs", "evidence", `${changeId}-checkpoint-${checkpoint}-proposal.md`);
+    const absolute = path.join(path.resolve(root), writtenPath);
+    fs.mkdirSync(path.dirname(absolute), { recursive: true });
+    fs.writeFileSync(absolute, markdown, "utf8");
+  }
+  return { change_id: changeId, checkpoint, gates, ready, blocking, packs, written_path: writtenPath, markdown };
+}
+
+function approveCheckpoint(root, { changeId, checkpoint, approver }) {
+  const gates = CHECKPOINT_GATES[checkpoint];
+  if (!gates) throw new Error(`checkpoint must be one of: ${Object.keys(CHECKPOINT_GATES).join(", ")}.`);
+  if (!approver || !approver.trim()) throw new Error("approver is required.");
+  const preview = checkpointPack(root, { changeId, checkpoint });
+  if (!preview.ready) throw new Error(`${checkpoint} checkpoint is not ready:\n- ${preview.blocking.join("\n- ")}`);
+  const { index } = loadIndex(root);
+  const changeArtifacts = index.artifacts.filter((item) => item.change_id === changeId);
+  const backups = new Map([[path.join(specsRoot(root), "index.json"), fs.readFileSync(path.join(specsRoot(root), "index.json"))]]);
+  for (const artifact of changeArtifacts) {
+    const file = path.join(path.resolve(root), artifact.path);
+    if (fs.existsSync(file)) backups.set(file, fs.readFileSync(file));
+  }
+  try {
+    const approvals = {};
+    const current = loadIndex(root).index.changes[changeId];
+    for (const gate of gates) approvals[gate] = current.gates?.[gate] || approve(root, { changeId, gate, approver });
+    return { change_id: changeId, checkpoint, approver: approver.trim(), approvals };
+  } catch (error) {
+    for (const [file, content] of backups) fs.writeFileSync(file, content);
+    throw error;
+  }
+}
+
 module.exports = {
   GATES,
+  CHECKPOINT_GATES,
   PACKAGES,
   GATE_PACKAGES,
   applyPromptAmendment,
   approveTrackerProjection,
   approve,
+  approveCheckpoint,
+  checkpointPack,
   currentBranch,
   createTrackerProjection,
   initialize,

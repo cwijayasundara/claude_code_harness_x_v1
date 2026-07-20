@@ -63,10 +63,22 @@ function validateDirectBrd(content) {
   return errors;
 }
 
+function validateGoverningIntent(content) {
+  const errors = [];
+  if (!content || typeof content !== "object" || Array.isArray(content)) return ["intents content must be an object."];
+  if (content.artifact_type !== "governing-intent") errors.push("intents.artifact_type must be 'governing-intent'.");
+  if (typeof content.outcome !== "string" || !content.outcome.trim()) errors.push("intents.outcome is required.");
+  for (const field of ["actors", "scope", "exclusions", "acceptance_signals"]) {
+    if (!Array.isArray(content[field])) errors.push(`intents.${field} must be an array.`);
+  }
+  return errors;
+}
+
 function validateSpddArtifact(artifact) {
   if (artifact.package === "analysis") return validateAnalysis(artifact.content);
   if (artifact.package === "reasons-canvas") return validateReasonsCanvas(artifact.content);
   if (artifact.package === "brd") return validateDirectBrd(artifact.content);
+  if (artifact.package === "intents") return validateGoverningIntent(artifact.content);
   if (artifact.package === "prompt-amendments") {
     const content = artifact.content;
     const errors = [];
@@ -88,7 +100,8 @@ function validateSpddArtifact(artifact) {
 
 function g0Requirements(sourceKind) {
   if (sourceKind === "prd") return ["source", "prd", "analysis", "reasons-canvas"];
-  return ["source", "brd"];
+  if (sourceKind === "brd") return ["source", "brd"];
+  return ["source", "intents"];
 }
 
 function validateG0Route(records, loadBody) {
@@ -121,6 +134,7 @@ module.exports = {
   g0Requirements,
   validateAnalysis,
   validateDirectBrd,
+  validateGoverningIntent,
   validateG0Route,
   validateReasonsCanvas,
   validateSpddArtifact,

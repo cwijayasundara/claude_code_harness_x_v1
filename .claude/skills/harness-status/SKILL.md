@@ -5,4 +5,4 @@ disable-model-invocation: true
 
 # Harness status
 
-Run `node "$CLAUDE_PLUGIN_ROOT/scripts/harness-status.js" .` from the target project. Use its output as the factual baseline, then return a compact status with: current request/story, route, latest evidence status, unresolved decisions, and the next concrete action. Do not infer success without evidence.
+Run `node "$CLAUDE_PLUGIN_ROOT/scripts/harness-status.js" .` from the target project. It leads with the active change, outcome, route, mode, checkpoint progress, human action, and recomputed next action. Use `--full` only when the user requests operational detail. Use its output as the factual baseline and do not infer success without evidence.

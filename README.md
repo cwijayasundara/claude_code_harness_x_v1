@@ -18,10 +18,14 @@ claude --plugin-dir /absolute/path/to/claude_code_harness_x_v1/.claude
 The supported public surface is intentionally small:
 
 ```text
-/lean-expert-generalist-harness:harness "deliver requirements/change-prd.md"
+/lean-expert-generalist-harness:harness "Deliver requirements/change-prd.md"
 /lean-expert-generalist-harness:harness-status
 /lean-expert-generalist-harness:harness-retro
 ```
+
+`/harness` is the single SDLC front door. It accepts an idea, PRD, BRD,
+feature, epic, story, issue, design, tests, or existing diff; it can stop after
+an intermediate artifact or continue through verified draft-PR readiness.
 
 `harness-operations` remains an internal/maintainer entry point for setup,
 validation, sensors, upgrades, and release checks.
@@ -68,10 +72,11 @@ Before asking the harness to deliver product code:
 
 Commit this configuration so humans and agents operate with the same guides.
 
-### 3. Deliver a change
+### 3. Start or continue SDLC work
 
 Create a feature branch—the harness refuses specification and implementation
-writes on protected branches—then put the request in a durable file:
+writes on protected branches. Durable files are recommended and required for
+PRD/BRD authority:
 
 ```sh
 git switch -c feature/example-change
@@ -80,13 +85,37 @@ mkdir -p requirements
 claude --plugin-dir "$CLAUDE_PLUGIN_ROOT"
 ```
 
-In Claude Code, run:
+Start from whatever durable input you actually have:
 
 ```text
-/lean-expert-generalist-harness:harness "deliver requirements/example-change.md"
+/lean-expert-generalist-harness:harness "Deliver requirements/example-change.md"
+/lean-expert-generalist-harness:harness "Implement requirements/US-142.md"
+/lean-expert-generalist-harness:harness "Add invoice export"
+/lean-expert-generalist-harness:harness "Fix issue #381"
+/lean-expert-generalist-harness:harness "Design invoice export but do not write code"
+/lean-expert-generalist-harness:harness "Continue"
 ```
 
-The harness proposes, but never self-approves, the specification gates:
+The harness reports the inferred starting point, target, repository posture,
+delivery lane, and interaction mode before it drafts artifacts. Optional
+overrides are `--from`, `--through`, `--mode`, `--change`, `--new-system`, and
+`--existing-system`. Normal use does not require them.
+
+Interaction modes are:
+
+- `guided`: detailed co-design decisions;
+- `checkpoint` (default): consolidated product, solution, and readiness stops;
+- `unattended`: implementation only inside an already human-approved contract.
+
+Risk changes review and evidence depth, not the size of the delivery lane.
+A bounded security-sensitive story remains bounded.
+
+Checkpoint mode keeps G0-G4 as separate evidence and approval records. Product
+combines G0+G1; solution combines G2+G3+G4. A combined approval is recorded only
+after every constituent gate validates, and a failure leaves no partial gate
+approval.
+
+Internally, the harness proposes, but never self-approves, the specification gates:
 
 - G0: source, interpretation, and intended outcome
 - G1: epics, stories, estimates, dependencies, and delivery order
@@ -97,8 +126,323 @@ The harness proposes, but never self-approves, the specification gates:
 After approval it executes one story at a time through a failing test,
 implementation, independent review, deterministic sensors, and verification.
 Use `/lean-expert-generalist-harness:harness-status` to see the current gate or
-story state, required evidence, and actionable failures. Humans retain product,
-material architecture, security/privacy, merge, and deployment decisions.
+story state, target, route, required human action, and recomputed next step. Use
+the full status view for detailed evidence and actionable failures. Humans
+retain product, material architecture, security/privacy, merge, and deployment
+decisions.
+
+## Detailed user guide
+
+### Use one front door
+
+You do not need to choose a different command for requirements, design, tests,
+implementation, or an existing-code change. Describe the source and the outcome
+to `/harness`; it selects the smallest sufficient route and reports its choice
+before writing delivery artifacts.
+
+```text
+/lean-expert-generalist-harness:harness "<what you want delivered>"
+```
+
+The classification has five independent parts:
+
+| Field | Meaning | Examples |
+| --- | --- | --- |
+| Starting point | What evidence you supplied | `prd`, `brd`, `feature`, `story`, `issue`, `design`, `tests`, `diff` |
+| Target | Where this run should stop | `backlog`, `design`, `tests`, `implementation`, `verified`, `draft-pr` |
+| Repository posture | Whether existing behaviour must be preserved | `greenfield`, `brownfield` |
+| Delivery lane | How much process the scope needs | `documentation`, `bounded-change`, `feature`, `initiative`, `refactor`, `re-entry` |
+| Interaction mode | When the harness returns to you | `guided`, `checkpoint`, `unattended` |
+
+If classification confidence is not high, the harness exposes its assumption
+and asks only questions that could change observable behaviour, domain meaning,
+data/security handling, architecture, or test expectations.
+
+### Choose a starting point
+
+#### Idea or short feature description
+
+Use natural language when the work is still taking shape:
+
+```text
+/lean-expert-generalist-harness:harness "Add invoice export for account administrators"
+```
+
+The harness captures the exact request as a durable source, proposes a governing
+intent, and decides whether the result is one bounded story, a multi-story
+feature, or a larger initiative. It does not invent a fictional PRD or BRD.
+
+#### PRD
+
+Use a repository-owned file for product requirements:
+
+```text
+/lean-expert-generalist-harness:harness "Deliver requirements/payments-prd.md"
+```
+
+PRD intake preserves the immutable source, performs source-grounded SPDD
+analysis, completes the REASONS Canvas, then proposes product and solution
+checkpoints. The original PRD remains authoritative.
+
+#### Direct BRD
+
+An already reviewed, sufficiently bounded BRD can enter directly:
+
+```text
+/lean-expert-generalist-harness:harness "Deliver requirements/refunds-brd.md" --from brd
+```
+
+The product checkpoint makes the direct-BRD rationale and sufficiency checks
+explicit. Ambiguous business requirements are not silently promoted.
+
+#### Epic or feature
+
+Use a feature or epic when the outcome is known but decomposition is not:
+
+```text
+/lean-expert-generalist-harness:harness "Deliver the account notification-preferences feature"
+```
+
+The product checkpoint shows epics, INVEST-sized stories, estimates,
+dependencies, critical path, and proposed allocation clusters. Allocation is a
+human decision; the harness does not assign engineers automatically.
+
+#### User story
+
+A bounded story can start close to implementation:
+
+```text
+/lean-expert-generalist-harness:harness "Implement requirements/US-142.md" --from story
+```
+
+The harness checks actor, observable outcome, acceptance criteria, scope,
+dependencies, affected surfaces, and material risks. It fills only missing
+design, test, and traceability contracts. If the story contains several
+independently deliverable outcomes, it proposes promotion to a feature for human
+review instead of rewriting it silently.
+
+#### Issue, bug, or defect
+
+```text
+/lean-expert-generalist-harness:harness "Fix issue #381"
+```
+
+The route begins with reproduction and expected behaviour, then creates a
+bounded governing intent, regression test, implementation, independent review,
+sensors, and verification. Do not stack speculative fixes when the defect has
+not been reproduced.
+
+#### Existing ungoverned changes
+
+Use the re-entry route after exploratory or vibe coding:
+
+```text
+/lean-expert-generalist-harness:harness "Bring the current diff into the harness and verify it" --from diff
+```
+
+The harness runs sensors first, records the governing intent, examines the
+actual diff, and reconstructs missing tests and evidence. Existing code is not
+treated as proof that the intended behaviour is correct.
+
+### Stop at an intermediate SDLC stage
+
+Not every run needs to write code. State the stopping point naturally or use
+`--through`:
+
+```text
+/lean-expert-generalist-harness:harness "Turn requirements/payments-prd.md into an approved backlog; do not code"
+/lean-expert-generalist-harness:harness "Design US-142 but do not implement it" --through design
+/lean-expert-generalist-harness:harness "Create traceable test cases for US-142" --through tests
+/lean-expert-generalist-harness:harness "Deliver US-142" --through draft-pr
+```
+
+Supported targets are:
+
+| Target | Result |
+| --- | --- |
+| `brief` | Grounded intent and open decisions |
+| `backlog` | Approved epics, stories, estimates, and dependency order |
+| `design` | Approved structural design and measurable budgets |
+| `tests` | Approved strategy, cases, data, and traceability |
+| `implementation` | Code and focused tests, without readiness claim |
+| `verified` | Story and branch verification evidence |
+| `draft-pr` | Verified readiness for a draft PR; never merge or deployment authority |
+
+### Choose the interaction mode
+
+#### Checkpoint mode — default
+
+Checkpoint mode minimizes interruptions while keeping product and architecture
+decisions human-owned:
+
+```text
+Product checkpoint -> Solution checkpoint -> Story execution -> Readiness
+```
+
+- Product combines G0 and G1: source meaning, scope, stories, and dependencies.
+- Solution combines G2, G3, and G4: tests, design, contracts, and traceability.
+- Readiness summarizes implementation, independent review, sensors, and pre-PR
+  verification.
+
+Each combined approval is atomic. If one constituent gate is incomplete, no
+partial approval is recorded.
+
+#### Guided mode
+
+Use guided mode for unfamiliar domains, substantial ambiguity, or when the team
+wants to inspect each decision in detail:
+
+```text
+/lean-expert-generalist-harness:harness "Deliver requirements/payments-prd.md" --mode guided
+```
+
+The harness presents the individual gate sessions and returns whenever a
+material product, test, architecture, security, privacy, migration, public API,
+or performance decision is required.
+
+#### Unattended mode
+
+Use unattended mode only after the solution and story contracts are already
+human-approved:
+
+```text
+/lean-expert-generalist-harness:harness "Deliver approved story US-142" --mode unattended
+```
+
+Unattended means autonomous execution inside an approved envelope. It does not
+allow the agent to approve product meaning, architecture changes, security
+exceptions, merge, or deployment. If required approvals are missing, the
+harness prepares the missing checkpoint and stops.
+
+### Review a checkpoint
+
+Checkpoint proposals lead with the decision, recommendation, alternatives,
+risks, open questions, and evidence summary. Detailed JSON remains available as
+an appendix. Respond plainly:
+
+```text
+Approve the product checkpoint.
+```
+
+or:
+
+```text
+Revise the solution: retain exports for 24 hours, not seven days.
+```
+
+Approved artifacts are immutable. A later intent change creates a linked
+amendment, supersedes affected artifacts, and reopens the relevant gates.
+
+### Follow progress and resume safely
+
+Use the human-facing status command at any time:
+
+```text
+/lean-expert-generalist-harness:harness-status
+```
+
+The default view shows:
+
+- active change and branch;
+- requested outcome, route, and mode;
+- product and solution checkpoint progress;
+- verified story count;
+- current blocker and required human action;
+- the next action recomputed from durable evidence.
+
+For operational detail, ask for full status or run:
+
+```sh
+node "$CLAUDE_PLUGIN_ROOT/scripts/harness-status.js" . --full
+```
+
+Resume after compaction, a closed terminal, or a stopped session with:
+
+```text
+/lean-expert-generalist-harness:harness "Continue"
+```
+
+If several changes are active, identify one explicitly:
+
+```text
+/lean-expert-generalist-harness:harness "Continue" --change PAYMENTS-EXPORT
+```
+
+Resume derives the next step from recorded gates, story ratchets, verification,
+and readiness evidence. A cached narrative is never treated as authoritative.
+
+### Greenfield and brownfield routes
+
+Greenfield initiatives normally follow:
+
+```text
+source -> product checkpoint -> solution checkpoint -> story ratchets
+       -> pre-PR verification -> independent branch review -> draft PR readiness
+```
+
+An existing repository adds the smallest sufficient discovery work:
+
+```text
+B0 baseline health -> B1 bounded code map -> B2 reuse-first change strategy
+```
+
+The harness should reuse a fresh, approved brownfield map when possible. It
+does not broaden a one-story change into repository-wide discovery merely
+because the surface is security-sensitive.
+
+### What the harness creates
+
+| Location | Purpose |
+| --- | --- |
+| `.claude/specs/source/` | Immutable captured inputs |
+| `.claude/specs/intents/` | Governing intent for idea/feature/story/issue routes |
+| `.claude/specs/epics/`, `stories/`, `dependencies/` | Approved delivery decomposition |
+| `.claude/specs/design/`, `architecture/` | Design decisions and evolution rules |
+| `.claude/specs/test-*` | Test data, cases, and plans |
+| `.claude/specs/plans/`, `traceability/` | Executable story contracts and requirement/test links |
+| `.claude/specs/evidence/`, `reviews/` | Real command evidence and independent verdicts |
+| `.claude/state/stories/` | Mutable ratchet state; never evidence by itself |
+| `.claude/specs/index.json` | Source, relationship, approval, and active-work ledger |
+
+### Common operating examples
+
+```text
+# Small existing-system story
+/lean-expert-generalist-harness:harness "Implement requirements/US-142.md"
+
+# Multi-story feature with normal checkpoints
+/lean-expert-generalist-harness:harness "Add account-level invoice exports"
+
+# Full PRD but stop before implementation
+/lean-expert-generalist-harness:harness "Prepare requirements/payments-prd.md through tests; do not code"
+
+# Existing-system refactor with no intended behaviour change
+/lean-expert-generalist-harness:harness "Refactor the invoice parser without changing behaviour"
+
+# Verify manually edited code
+/lean-expert-generalist-harness:harness "Govern and verify the current diff" --from diff
+
+# Continue an interrupted delivery
+/lean-expert-generalist-harness:harness "Continue"
+```
+
+### Troubleshooting
+
+- **No named feature branch:** switch off `main`, `master`, or `develop` before
+  specification or implementation writes.
+- **PRD/BRD supplied only in chat:** save or identify the authoritative project
+  file; conversation summaries are not accepted as those source types.
+- **Checkpoint not ready:** correct the named missing or invalid constituent
+  artifacts and regenerate the checkpoint. Do not approve gates individually
+  merely to bypass the combined validation.
+- **Unattended mode refuses to start:** approve the missing G4 execution
+  contract or use checkpoint/guided mode.
+- **Several active changes:** resume with `--change <id>`.
+- **Stale sensor or verification evidence:** rerun the named command against the
+  current workspace; timestamps without matching hashes do not establish
+  freshness.
+- **Required verification is unconfigured:** configure the real repository
+  command in `.claude/verification.json`. Required placeholders fail closed.
 
 ### 4. Brownfield repositories
 

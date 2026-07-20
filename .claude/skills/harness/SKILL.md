@@ -39,6 +39,38 @@ $ARGUMENTS
 
 Use this workflow. Keep artifacts and context proportionate to risk; do not invent a larger process.
 
+## Friendly entry and resume
+
+Treat `/harness` as the single SDLC front door. The request may start from an
+idea, PRD, BRD, feature, epic, story, issue, design, tests, or an existing diff,
+and may stop at a backlog, design, tests, implementation, verified change, or
+draft PR. Users do not need to know internal commands or gate names.
+
+1. If the request is `continue` or `resume`, run
+   `node "$CLAUDE_PLUGIN_ROOT/scripts/harness-work.js" resume --root .` (add
+   `--change <id>` when supplied), report the recomputed route and next action,
+   and continue from durable evidence. Never trust a narrative memory of state.
+2. Otherwise classify before drafting with `harness-work.js classify`. Honour
+   explicit `--from`, `--through`, `--mode`, `--change`, `--new-system`, and
+   `--existing-system` intent over inference. The supported interaction modes
+   are `guided`, `checkpoint` (default), and `unattended`.
+3. Show the classification in five short fields: starting point, target,
+   repository posture, lane, and interaction mode. State the rationale when
+   confidence is not high. Ask only questions whose answer changes observable
+   behaviour, domain meaning, data/security handling, design, or tests.
+4. For a file source, start durable work with `harness-work.js start`. For an
+   inline idea/feature/story/issue, capture the user's exact request in a
+   project-owned requirement file before intake; do not silently expand it into
+   a PRD or BRD.
+5. PRD and direct-BRD routes retain their existing G0 contracts. Other source
+   kinds use a registered `intents` governing-intent artifact. A story or issue
+   must not acquire a fictional upstream PRD merely to satisfy process shape.
+6. Risk raises review and evidence depth; scale and requested outcome select
+   the lane. A bounded security-sensitive change remains bounded.
+7. `unattended` authorizes execution only when G4 and every material decision
+   are already human-approved. Otherwise prepare the missing checkpoint and
+   stop for the human decision.
+
 Invoking `/harness` activates the production sensor lifecycle for this skill:
 file edits schedule debounced changed-path checks, and Stop/TaskCompleted fail
 closed on missing, stale, workspace-mismatched, or blocking evidence. These
@@ -73,7 +105,7 @@ story work. Co-design gates still apply before product claims and draft PRs.
 2. Run `node "$CLAUDE_PLUGIN_ROOT/scripts/harness-validate.js" .` before reading project context. Resolve configuration errors before delivery work.
 3. Invoke `harness-engineering-core` and `harness-context-selection`. Read only the relevant project files they identify.
 4. Confirm Git is on a named feature branch. Never write specifications or product code on `main`, `master`, or `develop`.
-5. For a BRD/PRD inside the project, run `node "$CLAUDE_PLUGIN_ROOT/scripts/harness-specs.js" intake --change <id> --source <path> --kind <brd|prd> --root .`. This captures an immutable source and hash in `.claude/specs/index.json`. Do not treat a conversation summary as a BRD/PRD; ask the human to save or identify the governing source. PRD intake then requires a source-grounded SPDD analysis and a complete REASONS Canvas (`requirements`, `entities`, `approach`, `structure`, `operations`, `norms`, `safeguards`, and sync state) before G0. A directly supplied BRD must declare the reviewed `brd-direct` rationale and sufficiency checks. Use the target examples under `.claude/specs/analysis/`, `.claude/specs/reasons-canvas/`, and `.claude/specs/brd/`.
+5. Intake supports `idea|prd|brd|feature|epic|story|issue|design|tests|diff` and captures an immutable source and hash in `.claude/specs/index.json`. Do not treat a conversation summary as a BRD/PRD; ask the human to save or identify those governing sources. PRD intake then requires a source-grounded SPDD analysis and a complete REASONS Canvas (`requirements`, `entities`, `approach`, `structure`, `operations`, `norms`, `safeguards`, and sync state) before G0. A directly supplied BRD must declare the reviewed `brd-direct` rationale and sufficiency checks. Other kinds require a grounded governing-intent artifact using `.claude/specs/intents/governing-intent.example.json`. Use the target examples under `.claude/specs/analysis/`, `.claude/specs/reasons-canvas/`, `.claude/specs/brd/`, and `.claude/specs/intents/`.
 6. Put every derived artifact in its matching `.claude/specs/<package>/` as schema-compatible JSON, then register it with `harness-specs.js register --file <path> --root .`. Every artifact must name captured `source_ids`, precise `source_locations`, assumptions, and open questions.
 7. Stop when ambiguity changes observable behaviour, domain meaning, data handling, security, architecture, or test expectations. Never silently promote an inference to a requirement.
 
@@ -94,6 +126,12 @@ Each gate pack leads with a **human decision session** (G0 interpretation, G1
 stories/deps, G2 tests, G3 structural alternatives, G4 contracts, B0–B2 brownfield)
 before the JSON appendix. Do not call `approve` until the human explicitly accepts
 that pack.
+
+In `checkpoint` mode, present G0+G1 as one product checkpoint and G2+G3+G4 as
+one solution checkpoint using `harness-specs.js checkpoint-proposal --write`.
+Only after the human explicitly approves the combined markdown may
+`checkpoint-approve` record that decision against its constituent gates. The
+operation validates every gate and leaves no partial approval on failure.
 
 Gate meanings:
 

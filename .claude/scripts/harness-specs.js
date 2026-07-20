@@ -7,10 +7,12 @@ function usage() {
   process.stderr.write(
     "Usage:\n" +
     "  harness-specs.js init [--root .]\n" +
-    "  harness-specs.js intake --change <id> --source <file> --kind <brd|prd> [--root .]\n" +
+    "  harness-specs.js intake --change <id> --source <file> --kind <idea|prd|brd|feature|epic|story|issue|design|tests|diff> [--root .]\n" +
     "  harness-specs.js register --file <artifact.json> [--root .]\n" +
     "  harness-specs.js proposal --change <id> --gate <G0..G4|B0..B2> [--write] [--root .]\n" +
+    "  harness-specs.js checkpoint-proposal --change <id> --checkpoint <product|solution> [--write] [--root .]\n" +
     "  harness-specs.js approve --change <id> --gate <G0..G4|B0..B2> --approver <name> [--root .]\n" +
+    "  harness-specs.js checkpoint-approve --change <id> --checkpoint <product|solution> --approver <name> [--root .]\n" +
     "  harness-specs.js amend --change <id> --amendment <artifact-id> --approver <name> [--root .]\n" +
     "  harness-specs.js tracker-export --change <id> --provider <linear|jira|azure-devops|generic> --project <key> [--root .]\n" +
     "  harness-specs.js tracker-approve --projection <artifact-id> --approver <name> [--root .]\n" +
@@ -58,6 +60,14 @@ try {
     }
   } else if (command === "approve" && values.change && values.gate && values.approver) {
     result = specs.approve(root, { changeId: values.change, gate: values.gate, approver: values.approver });
+  } else if (command === "checkpoint-proposal" && values.change && values.checkpoint) {
+    result = specs.checkpointPack(root, { changeId: values.change, checkpoint: values.checkpoint, write: flags.has("write") });
+    if (flags.has("markdown-only")) {
+      process.stdout.write(result.markdown);
+      process.exit(result.ready ? 0 : 1);
+    }
+  } else if (command === "checkpoint-approve" && values.change && values.checkpoint && values.approver) {
+    result = specs.approveCheckpoint(root, { changeId: values.change, checkpoint: values.checkpoint, approver: values.approver });
   } else if (command === "amend" && values.change && values.amendment && values.approver) {
     result = specs.applyPromptAmendment(root, { changeId: values.change, amendmentId: values.amendment, approver: values.approver });
   } else if (command === "tracker-export" && values.change && values.provider && values.project) {

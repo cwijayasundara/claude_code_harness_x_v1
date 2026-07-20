@@ -58,6 +58,36 @@ test("intake captures an immutable source and binds the change to the feature br
   assert.deepEqual(specs.validate(root, "CHANGE-001"), []);
 });
 
+test("story intake uses a governing intent instead of a synthetic PRD or BRD", () => {
+  const root = project();
+  fs.writeFileSync(path.join(root, "story.md"), "# US-142\nAs an administrator I can export invoices.\n");
+  const source = specs.intake(root, { changeId: "US-142", source: "story.md", kind: "story" });
+  assert.equal(source.kind, "story");
+  registerDraft(root, {
+    id: "US-142-intent", package: "intents", change_id: "US-142", source_ids: ["US-142-source"],
+    source_locations: ["story.md"], derived_from: [], status: "draft", assumptions: [], open_questions: [],
+    content: {
+      artifact_type: "governing-intent", outcome: "Administrators can export invoices.",
+      actors: ["administrator"], scope: ["invoice export"], exclusions: [], acceptance_signals: ["CSV can be downloaded"],
+    },
+  });
+  const pack = specs.proposalPack(root, { changeId: "US-142", gate: "G0" });
+  assert.equal(pack.ready, true);
+  assert.deepEqual(pack.missing_packages, []);
+  assert.equal(specs.approve(root, { changeId: "US-142", gate: "G0", approver: "Alex" }).status, "approved");
+});
+
+test("governing intent fails closed when its outcome contract is incomplete", () => {
+  const root = project();
+  fs.writeFileSync(path.join(root, "feature.md"), "# Feature\n");
+  specs.intake(root, { changeId: "F-1", source: "feature.md", kind: "feature" });
+  assert.throws(() => registerDraft(root, {
+    id: "F-1-intent", package: "intents", change_id: "F-1", source_ids: ["F-1-source"],
+    source_locations: ["feature.md"], derived_from: [], status: "draft", assumptions: [], open_questions: [],
+    content: { artifact_type: "governing-intent", outcome: "", actors: [], scope: [], exclusions: [], acceptance_signals: [] },
+  }), /intents.outcome is required/);
+});
+
 test("specification writes are refused on protected branches", () => {
   const root = project("main");
   fs.writeFileSync(path.join(root, "prd.md"), "# PRD\n");
@@ -96,6 +126,61 @@ test("human gates are sequential and record the approver", () => {
   assert.equal(approval.status, "approved");
   assert.equal(approval.approver, "Alex");
   assert.throws(() => specs.approve(root, { changeId: "C-2", gate: "G1", approver: "Alex" }), /requires registered artifacts in: epics, stories, dependencies, allocations/);
+});
+
+test("product checkpoint presents and atomically records G0 and G1", () => {
+  const root = project();
+  fs.writeFileSync(path.join(root, "brd.md"), "# BRD\nShip one outcome.\n");
+  specs.intake(root, { changeId: "C-CHECK", source: "brd.md", kind: "brd" });
+  registerDraft(root, {
+    id: "C-CHECK-brd", package: "brd", change_id: "C-CHECK", source_ids: ["C-CHECK-source"],
+    source_locations: ["brd.md"], derived_from: [], status: "draft", assumptions: [], open_questions: [],
+    content: { intake_path: "brd-direct", direct_brd_rationale: "Sufficient bounded requirement", sufficiency_checks: ["Outcome is explicit"] },
+  });
+  registerDraft(root, {
+    id: "C-CHECK-epic", package: "epics", change_id: "C-CHECK", source_ids: ["C-CHECK-source"],
+    source_locations: ["brd.md"], derived_from: [], status: "draft", assumptions: [], open_questions: [], content: { title: "Outcome" },
+  });
+  registerDraft(root, {
+    id: "C-CHECK-story", package: "stories", change_id: "C-CHECK", source_ids: ["C-CHECK-source"],
+    source_locations: ["brd.md"], derived_from: ["C-CHECK-epic"], status: "draft", assumptions: [], open_questions: [],
+    content: { title: "Deliver outcome", size: "low", story_points: 2, estimate_confidence: "high", estimate_basis: ["One seam"], acceptance_criteria: ["Outcome is visible"] },
+  });
+  registerDraft(root, {
+    id: "C-CHECK-deps", package: "dependencies", change_id: "C-CHECK", source_ids: ["C-CHECK-source"],
+    source_locations: ["brd.md"], derived_from: ["C-CHECK-story"], status: "draft", assumptions: [], open_questions: [],
+    content: { nodes: [{ story_id: "C-CHECK-story" }], edges: [] },
+  });
+  registerDraft(root, {
+    id: "C-CHECK-alloc", package: "allocations", change_id: "C-CHECK", source_ids: ["C-CHECK-source"],
+    source_locations: ["brd.md"], derived_from: ["C-CHECK-story", "C-CHECK-deps"], status: "draft", assumptions: [], open_questions: [],
+    content: { clusters: [{ id: "cluster-1", story_ids: ["C-CHECK-story"], total_points: 2, shared_seams: [], required_skills: [], depends_on_clusters: [], rationale: "One cohesive story" }] },
+  });
+  const pack = specs.checkpointPack(root, { changeId: "C-CHECK", checkpoint: "product", write: true });
+  assert.equal(pack.ready, true);
+  assert.match(pack.markdown, /one human decision/);
+  assert.ok(fs.existsSync(path.join(root, pack.written_path)));
+  const result = specs.approveCheckpoint(root, { changeId: "C-CHECK", checkpoint: "product", approver: "Alex" });
+  assert.equal(result.approvals.G0.status, "approved");
+  assert.equal(result.approvals.G1.status, "approved");
+  const index = JSON.parse(fs.readFileSync(path.join(root, ".claude", "specs", "index.json"), "utf8"));
+  assert.equal(index.changes["C-CHECK"].gates.G0.approver, "Alex");
+  assert.equal(index.changes["C-CHECK"].gates.G1.approver, "Alex");
+});
+
+test("checkpoint approval leaves no partial approval when a constituent gate is incomplete", () => {
+  const root = project();
+  fs.writeFileSync(path.join(root, "brd.md"), "# BRD\n");
+  specs.intake(root, { changeId: "C-ROLLBACK", source: "brd.md", kind: "brd" });
+  registerDraft(root, {
+    id: "C-ROLLBACK-brd", package: "brd", change_id: "C-ROLLBACK", source_ids: ["C-ROLLBACK-source"],
+    source_locations: ["brd.md"], derived_from: [], status: "draft", assumptions: [], open_questions: [],
+    content: { intake_path: "brd-direct", direct_brd_rationale: "Sufficient", sufficiency_checks: ["Reviewed"] },
+  });
+  assert.throws(() => specs.approveCheckpoint(root, { changeId: "C-ROLLBACK", checkpoint: "product", approver: "Alex" }), /not ready/);
+  const index = JSON.parse(fs.readFileSync(path.join(root, ".claude", "specs", "index.json"), "utf8"));
+  assert.equal(index.changes["C-ROLLBACK"].gates.G0, undefined);
+  assert.equal(index.artifacts.find((item) => item.id === "C-ROLLBACK-brd").status, "draft");
 });
 
 test("PRD G0 fails closed without SPDD and rejects a canvas not derived from analysis", () => {

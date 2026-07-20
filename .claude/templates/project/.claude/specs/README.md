@@ -1,7 +1,8 @@
 # Source-grounded delivery specifications
 
-`index.json` is the traceability and approval ledger. Original BRD/PRD inputs
-are captured immutably under `source/`; derived artifacts live in one focused
+`index.json` is the traceability and approval ledger. Original idea, PRD, BRD,
+feature, epic, story, issue, design, test, and diff inputs are captured
+immutably under `source/`; derived artifacts live in one focused
 package and name their source IDs. The harness refuses specification writes on
 `main`, `master`, and `develop`.
 
@@ -9,6 +10,7 @@ Use the plugin CLI:
 
 ```sh
 node "$CLAUDE_PLUGIN_ROOT/scripts/harness-specs.js" intake --change CHANGE-ID --source path/to/prd.md --kind prd --root .
+node "$CLAUDE_PLUGIN_ROOT/scripts/harness-work.js" resume --root .
 node "$CLAUDE_PLUGIN_ROOT/scripts/harness-specs.js" register --file path/to/draft.json --root .
 node "$CLAUDE_PLUGIN_ROOT/scripts/harness-specs.js" approve --change CHANGE-ID --gate G0 --approver "Human Name" --root .
 node "$CLAUDE_PLUGIN_ROOT/scripts/harness-specs.js" validate --change CHANGE-ID --root .
@@ -46,7 +48,8 @@ Invoke the `harness-tracker-publish` skill only after an explicit user request.
 For PRD intake, G0 requires a source-grounded `analysis` artifact and a
 seven-section `reasons-canvas` derived from it. For an already sufficient BRD,
 use the explicit `brd-direct` fields shown in `brd/direct-brd.example.json`;
-the G0 approval is the human decision accepting that route. G0 captures the
+other source kinds use the neutral governing-intent contract under `intents/`
+and do not manufacture an upstream PRD or BRD. The G0 approval is the human decision accepting that route. G0 captures the
 safe branch and structured interpretation; G1 approves epics, stories, and
 dependencies, estimates, critical path, and allocation clusters; G2 approves test data, cases, and plan; G3 approves design,
 architecture, folder structure, and performance budgets; G4 approves the

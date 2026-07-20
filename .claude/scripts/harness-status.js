@@ -2,6 +2,7 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
+const { spawnSync } = require("node:child_process");
 const { validateHarnessConfig } = require("../lib/harness-config");
 const { loadControlManifest } = require("../lib/control-manifest");
 const { loadWaivers } = require("../lib/sensor-waivers");
@@ -10,11 +11,49 @@ const { learningStatus } = require("../lib/improvement-ratchet");
 const { feedbackProvenance } = require("../lib/story-ratchet");
 const { analyzeFlakiness, operationalStatus, watcherStatus } = require("../lib/sensor-operations");
 const { evaluateProductionSlos } = require("../lib/production-feedback");
+const { listActiveWork } = require("../lib/work-state");
 
 const argumentsParsed = process.argv.slice(2);
 const agentMode = argumentsParsed.includes("--agent");
-const rootArgument = argumentsParsed.find((argument) => argument !== "--agent");
+const fullMode = argumentsParsed.includes("--full");
+const rootArgument = argumentsParsed.find((argument) => !["--agent", "--full"].includes(argument));
 const root = path.resolve(rootArgument || ".");
+
+function currentBranch(root) {
+  const result = spawnSync("git", ["-C", root, "branch", "--show-current"], { encoding: "utf8" });
+  return result.status === 0 ? result.stdout.trim() : null;
+}
+
+function compactWorkflowStatus(root) {
+  const active = listActiveWork(root, currentBranch(root));
+  if (!active.length) return false;
+  process.stdout.write("# Harness status\n\n");
+  if (active.length > 1) {
+    process.stdout.write(`Multiple active changes exist on this branch: ${active.map((item) => item.change_id).join(", ")}\n`);
+    process.stdout.write("\nHuman action: choose a change with `/harness \"continue\" --change <id>`.\n");
+    return true;
+  }
+  const work = active[0];
+  const storyDirectory = path.join(root, ".claude", "state", "stories");
+  const stories = fs.existsSync(storyDirectory)
+    ? fs.readdirSync(storyDirectory).filter((name) => name.endsWith(".json")).map((name) => JSON.parse(fs.readFileSync(path.join(storyDirectory, name), "utf8"))).filter((story) => story.change_id === work.change_id)
+    : [];
+  const verified = stories.filter((story) => story.state === "STORY_VERIFIED").length;
+  process.stdout.write(`Change: ${work.change_id}\n`);
+  process.stdout.write(`Branch: ${work.branch}\n`);
+  process.stdout.write(`Outcome: ${work.target}\n`);
+  process.stdout.write(`Route: ${work.repository_posture} ${work.delivery_lane}\n`);
+  process.stdout.write(`Mode: ${work.interaction_mode}\n\n`);
+  process.stdout.write("Progress\n");
+  process.stdout.write(`- Product checkpoint: ${work.approved_gates.includes("G1") ? "approved" : "pending"}\n`);
+  process.stdout.write(`- Solution checkpoint: ${work.approved_gates.includes("G4") ? "approved" : "pending"}\n`);
+  process.stdout.write(`- Stories: ${verified}/${stories.length} verified\n`);
+  process.stdout.write(`- Current checkpoint: ${work.current_checkpoint}\n\n`);
+  process.stdout.write(`Next: ${work.next_action}\n`);
+  process.stdout.write(`Human action: ${work.current_checkpoint === "delivery" ? "None unless the ratchet escalates a material decision." : `Review the ${work.current_checkpoint} checkpoint when its proposal is ready.`}\n`);
+  process.stdout.write("\nUse `/harness-status --full` for sensors, verification, routing, and operational health.\n");
+  return true;
+}
 
 function trendFor(result, history) {
   const rank = { pass: 0, warn: 1, fail: 2 };
@@ -64,6 +103,10 @@ try {
   if (agentMode) {
     writeAgentSensorStatus(root, manifest);
     process.exitCode = 0;
+    return;
+  }
+  if (!fullMode && compactWorkflowStatus(root)) {
+    process.exitCode = errors.length === 0 ? 0 : 1;
     return;
   }
   process.stdout.write("# Harness status\n\n");
