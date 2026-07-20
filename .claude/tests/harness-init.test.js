@@ -18,6 +18,8 @@ function initialize(targetRoot) {
 test("initializes a progressive-disclosure CLAUDE.md without overwriting it", () => {
   const targetRoot = fs.mkdtempSync(path.join(os.tmpdir(), "harness-init-"));
   const guidePath = path.join(targetRoot, "CLAUDE.md");
+  const userGuidePath = path.join(targetRoot, "HARNESS_USER_GUIDE.md");
+  fs.writeFileSync(path.join(targetRoot, "package.json"), "{}\n");
 
   const firstRun = initialize(targetRoot);
   const generatedGuide = fs.readFileSync(guidePath, "utf8");
@@ -27,6 +29,12 @@ test("initializes a progressive-disclosure CLAUDE.md without overwriting it", ()
   assert.match(generatedGuide, /\.claude\/project\/architecture\.md/);
   assert.match(generatedGuide, /When compacting, preserve active change\/story IDs/);
   assert.match(generatedGuide, /separate Git worktree/);
+  const userGuide = fs.readFileSync(userGuidePath, "utf8");
+  assert.match(firstRun, /CREATE .*HARNESS_USER_GUIDE\.md/);
+  assert.match(userGuide, new RegExp(path.basename(targetRoot)));
+  assert.match(userGuide, /Node\.js \/ JavaScript \/ TypeScript/);
+  assert.match(userGuide, /requirements\/change-name\.md/);
+  assert.match(userGuide, /harness-status/);
   const controlManifest = JSON.parse(fs.readFileSync(path.join(targetRoot, ".claude", "harness-manifest.json"), "utf8"));
   assert.equal(controlManifest.version, 1);
   assert.ok(controlManifest.controls.some((control) => control.id === "profile-verification"));
@@ -54,8 +62,11 @@ test("initializes a progressive-disclosure CLAUDE.md without overwriting it", ()
   assert.ok(fs.existsSync(path.join(targetRoot, ".claude", "specs", "vibe-to-harness.template.md")));
 
   fs.writeFileSync(guidePath, "# Existing project guide\n");
+  fs.writeFileSync(userGuidePath, "# Team-customized harness guide\n");
   const secondRun = initialize(targetRoot);
 
   assert.match(secondRun, /SKIP .*CLAUDE\.md \(already exists\)/);
   assert.equal(fs.readFileSync(guidePath, "utf8"), "# Existing project guide\n");
+  assert.match(secondRun, /SKIP .*HARNESS_USER_GUIDE\.md \(already exists\)/);
+  assert.equal(fs.readFileSync(userGuidePath, "utf8"), "# Team-customized harness guide\n");
 });

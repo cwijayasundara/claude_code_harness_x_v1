@@ -26,6 +26,106 @@ The supported public surface is intentionally small:
 `harness-operations` remains an internal/maintainer entry point for setup,
 validation, sensors, upgrades, and release checks.
 
+## User guide: scaffold and use a repository
+
+### 1. Initialize the scaffold
+
+Set the plugin root to this repository's `.claude` directory and initialize the
+target repository:
+
+```sh
+export CLAUDE_PLUGIN_ROOT=/absolute/path/to/claude_code_harness_x_v1/.claude
+node "$CLAUDE_PLUGIN_ROOT/scripts/harness-init.js" /absolute/path/to/target-repository
+cd /absolute/path/to/target-repository
+```
+
+Initialization is additive: existing files are preserved. It creates the
+project-owned `.claude/` scaffold, a short agent-facing `CLAUDE.md`, and a
+human-facing `HARNESS_USER_GUIDE.md`. The latter is customized with the target
+repository's name and detected ecosystem markers and is intended to be edited
+as the team's local operating guide.
+
+### 2. Customize the new repository
+
+Before asking the harness to deliver product code:
+
+1. Edit `.claude/harness.yaml`. Keep only the technology profiles the target
+   actually uses and select the appropriate domain pack.
+2. Document real boundaries and reusable examples in
+   `.claude/project/architecture.md` and
+   `.claude/project/reference-patterns.md`.
+3. Configure real install/build, test, smoke, lint, type, security, boundary,
+   and performance checks in `.claude/verification.json`. Required checks fail
+   closed when they remain placeholders.
+4. Review the generated `HARNESS_USER_GUIDE.md` and add repository-specific
+   prerequisites, requirement locations, ownership, and release conventions.
+5. Validate the installation:
+
+   ```sh
+   node "$CLAUDE_PLUGIN_ROOT/scripts/harness-validate.js" .
+   node "$CLAUDE_PLUGIN_ROOT/scripts/harness-doctor.js" .
+   ```
+
+Commit this configuration so humans and agents operate with the same guides.
+
+### 3. Deliver a change
+
+Create a feature branch—the harness refuses specification and implementation
+writes on protected branches—then put the request in a durable file:
+
+```sh
+git switch -c feature/example-change
+mkdir -p requirements
+# Write requirements/example-change.md before starting delivery.
+claude --plugin-dir "$CLAUDE_PLUGIN_ROOT"
+```
+
+In Claude Code, run:
+
+```text
+/lean-expert-generalist-harness:harness "deliver requirements/example-change.md"
+```
+
+The harness proposes, but never self-approves, the specification gates:
+
+- G0: source, interpretation, and intended outcome
+- G1: epics, stories, estimates, dependencies, and delivery order
+- G2: test strategy, cases, and test data
+- G3: architecture, alternatives, design, and performance budgets
+- G4: executable story contracts and requirements/test traceability
+
+After approval it executes one story at a time through a failing test,
+implementation, independent review, deterministic sensors, and verification.
+Use `/lean-expert-generalist-harness:harness-status` to see the current gate or
+story state, required evidence, and actionable failures. Humans retain product,
+material architecture, security/privacy, merge, and deployment decisions.
+
+### 4. Brownfield repositories
+
+For an existing system, identify the smallest owning package or subsystem in
+the request. The harness first records baseline health (B0), builds a bounded
+provenance-labelled code map (B1), and proposes the smallest reuse-first change
+strategy (B2). Review cited code and tests before approving the strategy; the
+map is a navigation aid, not a claim of complete understanding.
+
+### 5. Operate and upgrade
+
+Useful commands from the target repository are:
+
+```sh
+node "$CLAUDE_PLUGIN_ROOT/scripts/harness-guides.js" --root . --path src/example.ts
+node "$CLAUDE_PLUGIN_ROOT/scripts/harness-sensors.js" .
+node "$CLAUDE_PLUGIN_ROOT/scripts/harness-status.js" . --agent
+node "$CLAUDE_PLUGIN_ROOT/scripts/harness-upgrade.js" --target .
+node "$CLAUDE_PLUGIN_ROOT/scripts/harness-upgrade.js" --target . --apply
+```
+
+Upgrade preview is read-only. Applying an upgrade adds missing scaffold files
+and merges supported baseline controls without overwriting project-owned policy
+or the customized `HARNESS_USER_GUIDE.md`. Use
+`/lean-expert-generalist-harness:harness-retro` to review repeated failures and
+propose the smallest useful guide, sensor, fixture, or control removal.
+
 ## Delivery model
 
 Greenfield work:

@@ -22,7 +22,7 @@ passing result.
 
 | User intent | Deterministic helper |
 | --- | --- |
-| Initialise or validate a target | `harness-init.js`, then `harness-validate.js` |
+| Initialise or validate a target | `harness-init.js` (creates a repository-specific `HARNESS_USER_GUIDE.md` without overwriting one), then `harness-validate.js` |
 | Diagnose environment readiness | `harness-doctor.js` |
 | Intake/register/approve/validate grounded specifications | `harness-specs.js` |
 | Configure opt-in tracker MCP servers | `harness-tracker-mcp.js` |

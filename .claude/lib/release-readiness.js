@@ -68,6 +68,7 @@ function validateReleaseLayout(root) {
     "scripts/harness-waiver.js",
     "scripts/harness-doctor.js",
     "templates/project/.claude/harness-manifest.json",
+    "templates/project/HARNESS_USER_GUIDE.md",
     "templates/project/.claude/guides.json",
     "templates/project/.claude/harness.yaml",
     "templates/project/.claude/sensor-waivers.json",
