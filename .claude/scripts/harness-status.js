@@ -7,6 +7,7 @@ const { loadControlManifest } = require("../lib/control-manifest");
 const { loadWaivers } = require("../lib/sensor-waivers");
 const { evaluatePilots } = require("../lib/pilot-evidence");
 const { learningStatus } = require("../lib/improvement-ratchet");
+const { feedbackProvenance } = require("../lib/story-ratchet");
 
 const argumentsParsed = process.argv.slice(2);
 const agentMode = argumentsParsed.includes("--agent");
@@ -82,6 +83,11 @@ try {
   else for (const name of fs.readdirSync(storyStateDirectory).filter((item) => item.endsWith(".json")).sort()) {
     const story = JSON.parse(fs.readFileSync(path.join(storyStateDirectory, name), "utf8"));
     process.stdout.write(`- ${story.story_id}: ${story.state}; repairs ${story.repair_attempts || 0}; updated ${story.updated_at}\n`);
+    if (story.completion_contract) {
+      process.stdout.write(`  - Exit: ${story.completion_contract.terminal_state}; AC ${story.completion_contract.acceptance_criteria.join(", ")}; sensors ${story.completion_contract.required_sensors.join(", ")}\n`);
+      const feedback = feedbackProvenance(story);
+      process.stdout.write(`  - Feedback: ${feedback.length ? feedback.map((item) => `${item.evidence}=${item.source}`).join(", ") : "none recorded"}\n`);
+    }
   }
   const verificationPlanPath = path.join(root, ".claude", "verification.json");
   if (fs.existsSync(verificationPlanPath)) {

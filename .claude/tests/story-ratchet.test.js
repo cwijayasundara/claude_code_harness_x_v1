@@ -59,7 +59,14 @@ function evidence(root, name, value) {
 
 test("moves one approved story through red, implementation, review, sensors, and verification", () => {
   const root = fixture();
-  assert.equal(ratchet.start(root, { changeId: "C-1", storyId: "C-1-story-1" }).state.state, "READY");
+  const started = ratchet.start(root, { changeId: "C-1", storyId: "C-1-story-1" });
+  assert.equal(started.state.state, "READY");
+  assert.deepEqual(started.state.completion_contract, {
+    acceptance_criteria: ["AC-1"],
+    required_sensors: ["unit"],
+    required_evidence: ["red_test", "implementation", "validator", "fast_sensors"],
+    terminal_state: "STORY_VERIFIED",
+  });
   const red = evidence(root, "red", { command: "pytest tests/test_app.py", exit_code: 1, expected_failure: "value should be 2", observed_failure: "expected 2, got 1", test_paths: ["tests/test_app.py"] });
   assert.equal(ratchet.recordRed(root, "C-1-story-1", red).state, "RED_TEST");
   fs.writeFileSync(path.join(root, "src", "app.py"), "def value(): return 2\n");
@@ -70,6 +77,12 @@ test("moves one approved story through red, implementation, review, sensors, and
   const sensors = evidence(root, "sensors", { generated_at: new Date(Date.now() + 1000).toISOString(), status: "pass", sensors: [{ sensor_id: "unit", status: "pass" }] });
   assert.equal(ratchet.recordSensors(root, "C-1-story-1", sensors).state, "FAST_SENSORS");
   assert.equal(ratchet.verify(root, "C-1-story-1").state, "STORY_VERIFIED");
+  assert.deepEqual(ratchet.feedbackProvenance(ratchet.loadState(root, "C-1-story-1").state), [
+    { evidence: "red_test", source: "deterministic-test" },
+    { evidence: "implementation", source: "deterministic-test" },
+    { evidence: "validator", source: "independent-evaluator" },
+    { evidence: "fast_sensors", source: "deterministic-sensor" },
+  ]);
 });
 
 test("rejects implementation outside the approved change scope", () => {

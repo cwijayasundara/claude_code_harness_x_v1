@@ -50,3 +50,26 @@ test("agent status gives concise correction guidance and a sensor trend", () => 
   assert.match(output, /PATHS: app\/config.py/);
   assert.match(output, /Remove and rotate the exposed credential/);
 });
+
+test("status surfaces a story completion contract and feedback provenance", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "harness-story-status-"));
+  execFileSync(process.execPath, [initializer, root], { cwd: pluginRoot, stdio: "ignore" });
+  const stories = path.join(root, ".claude", "state", "stories");
+  fs.writeFileSync(path.join(stories, "C-1-story-1.json"), JSON.stringify({
+    story_id: "C-1-story-1",
+    state: "STORY_REVIEW",
+    repair_attempts: 0,
+    updated_at: "2026-07-20T00:00:00.000Z",
+    completion_contract: {
+      acceptance_criteria: ["AC-1"],
+      required_sensors: ["unit"],
+      required_evidence: ["red_test", "implementation", "validator", "fast_sensors"],
+      terminal_state: "STORY_VERIFIED",
+    },
+    evidence: { red_test: {}, implementation: {}, validator: {} },
+  }));
+  const output = execFileSync(process.execPath, [status, root], { cwd: pluginRoot, encoding: "utf8" });
+  assert.match(output, /Exit: STORY_VERIFIED; AC AC-1; sensors unit/);
+  assert.match(output, /red_test=deterministic-test/);
+  assert.match(output, /validator=independent-evaluator/);
+});

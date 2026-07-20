@@ -61,6 +61,13 @@ on `main`, `master`, and `develop`.
 READY -> RED_TEST -> IMPLEMENT -> STORY_REVIEW -> FAST_SENSORS -> STORY_VERIFIED
 ```
 
+Starting a story persists and prints a concise completion contract: its
+acceptance criteria, required sensors and evidence, and the exact
+`STORY_VERIFIED` exit state. Harness status also labels recorded feedback by
+source (`deterministic-test`, `independent-evaluator`, `deterministic-sensor`,
+or `human-decision`) so reconsidering an agent's own output is never mistaken
+for external verification.
+
 The ratchet checks approved dependencies, allowed Git scope, failing-test and
 passing-test evidence, immutable hashes, a fresh read-only evaluator verdict,
 required sensors, and a single configured repair limit. A

@@ -14,6 +14,30 @@ const CONTRACT_ARRAYS = [
   "reuse_targets",
 ];
 
+const REQUIRED_STORY_EVIDENCE = Object.freeze([
+  { key: "red_test", feedback_source: "deterministic-test" },
+  { key: "implementation", feedback_source: "deterministic-test" },
+  { key: "validator", feedback_source: "independent-evaluator" },
+  { key: "fast_sensors", feedback_source: "deterministic-sensor" },
+]);
+
+function completionContract(contract) {
+  return {
+    acceptance_criteria: contract.acceptance_criteria,
+    required_sensors: contract.required_sensors,
+    required_evidence: REQUIRED_STORY_EVIDENCE.map((item) => item.key),
+    terminal_state: "STORY_VERIFIED",
+  };
+}
+
+function feedbackProvenance(state) {
+  const sources = REQUIRED_STORY_EVIDENCE
+    .filter((item) => state.evidence?.[item.key])
+    .map((item) => ({ evidence: item.key, source: item.feedback_source }));
+  if (state.state === "HUMAN_DECISION_REQUIRED") sources.push({ evidence: "decision", source: "human-decision" });
+  return sources;
+}
+
 function safeId(value, label) {
   if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(value || "")) throw new Error(`${label} is invalid.`);
 }
@@ -126,7 +150,7 @@ function start(root, { changeId, storyId }) {
   const state = {
     schema_version: 1, change_id: changeId, story_id: storyId, contract_id: planRecord.id,
     branch, state: "READY", started_at: now, updated_at: now, transitions: [],
-    evidence: {}, repair_attempts: 0,
+    evidence: {}, repair_attempts: 0, completion_contract: completionContract(contract),
   };
   writeJson(file, state);
   return { state, file, contract };
@@ -319,4 +343,4 @@ function verify(root, storyId) {
   return loaded.state;
 }
 
-module.exports = { STATES, finishRepair, loadState, recordImplementation, recordRed, recordReview, recordSensors, start, startRepair, validateContract, verify };
+module.exports = { STATES, completionContract, feedbackProvenance, finishRepair, loadState, recordImplementation, recordRed, recordReview, recordSensors, start, startRepair, validateContract, verify };
