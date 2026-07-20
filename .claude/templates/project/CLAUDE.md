@@ -9,7 +9,12 @@ versioned under `.claude/` and load only what the current task needs.
 1. Read `.claude/harness.yaml` to identify active technology profiles, the
    selected domain pack, review policy, and artifact root.
 2. Run the plugin's `harness-validate.js` before loading project context.
-3. Read `.claude/project/architecture.md` and
+3. Run the plugin's `harness-guides.js --root . --path <affected-path>
+   [--need <capability>]` and load its required results. Treat unavailable
+   optional capabilities as integration gaps; never imply that an LSP,
+   codemod, bootstrap tool, knowledge source, or API-doc source ran when it was
+   not configured.
+4. Read `.claude/project/architecture.md` and
    `.claude/project/reference-patterns.md`; then load only the profile, domain,
    code, and test material relevant to the requested change.
 
@@ -27,6 +32,7 @@ context.
 | Canonical local implementations to extend | `.claude/project/reference-patterns.md` |
 | Monorepo and large-tree navigation | `.claude/project/large-codebase.md` |
 | Path-scoped language/framework guidance | Run the plugin profile resolver, then read only its returned `.claude/profiles/<profile>/guide.md` paths |
+| Feedforward inventory and optional tool availability | `.claude/guides.json` via the plugin `harness-guides.js` resolver |
 | Business vocabulary, invariants, policies, and fixtures | `.claude/domains/<selected-domain-pack>/` |
 | Source-grounded requirements, stories, design, tests, approvals, and evidence | `.claude/specs/index.json` and the relevant `.claude/specs/<package>/` |
 | Active story state and next ratchet transition | `.claude/state/stories/` (read-only; advance with the plugin) |

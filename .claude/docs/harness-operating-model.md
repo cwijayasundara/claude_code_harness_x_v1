@@ -26,6 +26,29 @@ unbounded harness growth.
 sensors legible as a coherent control system rather than an accumulation of
 unexplained commands.
 
+## Feedforward guide coverage
+
+`.claude/guides.json` is the validated feedforward catalog. The
+`harness-guides.js` resolver selects its smallest task-relevant subset and
+reports external adapters as unavailable until the current agent confirms
+them. Its coverage maps to Fowler's examples as follows:
+
+| Fowler guide | Harness support |
+| --- | --- |
+| Principles, conventions, rules, and how-tos | Root `CLAUDE.md`, engineering core, and path-scoped profile guides |
+| CFRs (cross-functional requirements) | Approved architecture, performance, security, privacy, and observability requirements |
+| Reference docs | Project architecture, canonical reference patterns, domain packs, and optional API-doc sources |
+| Functional specification | Human-approved G0-G4 specification packages and story contracts |
+| Language servers | Optional `lsp` capability plus deterministic brownfield fallback |
+| CLIs and scripts | Plugin harness commands declared as computational guides |
+| Bootstrap scripts | Optional `project-bootstrap` capability paired with task instructions |
+| Codemods | Optional `codemod` capability; never claimed available without a usable tool |
+| Team knowledge | Optional `knowledge-mcp` capability with project-owned source authority |
+
+This catalog describes feedforward availability, not successful execution.
+Computational output becomes evidence only after the selected tool actually
+runs; inferential sources remain subject to human ownership and approval.
+
 ## Feedback lifecycle
 
 1. Before implementation, guides select the smallest relevant context,

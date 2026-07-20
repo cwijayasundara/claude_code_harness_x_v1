@@ -7,6 +7,7 @@ const {
   summarizeControlBudget,
   validateControlManifest,
 } = require("../lib/control-manifest");
+const { loadGuideCatalog, validateGuideCatalog } = require("../lib/feedforward-guides");
 
 const root = path.resolve(process.argv[2] || ".");
 
@@ -34,6 +35,13 @@ try {
   if (budget.net_adds.length > 0) {
     process.stdout.write(`INFO  Net-add controls: ${budget.net_adds.join(", ")}\n`);
   }
+  const { catalog } = loadGuideCatalog(root);
+  const guideErrors = validateGuideCatalog(root, catalog);
+  if (guideErrors.length > 0) {
+    for (const error of guideErrors) process.stderr.write(`ERROR: ${error}\n`);
+    process.exit(1);
+  }
+  process.stdout.write(`INFO  Feedforward guides: ${catalog.guides.length}; Fowler capability coverage complete\n`);
 } catch (error) {
   process.stderr.write(`ERROR: ${error.message}\n`);
   process.exit(2);

@@ -119,6 +119,7 @@ function planUpgrade(targetRoot, pluginRoot) {
   // Missing files that init would create (sample of critical + maintainability).
   const watchFiles = [
     ".claude/harness.yaml",
+    ".claude/guides.json",
     MANIFEST_REL,
     ".claude/harness-install.json",
     ".claude/project/boundaries.json",

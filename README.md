@@ -113,6 +113,15 @@ generated/vendor read-deny defaults, layered project guidance, optional sparse
 worktrees, and a preference for LSP/code-intelligence navigation over broad
 scans. Static mapping has no source-file-count ceiling.
 
+Feedforward guides are catalogued in `.claude/guides.json` and resolved per
+task by `harness-guides.js`. The validated catalog covers principles,
+conventions, rules, reference docs, how-tos, cross-functional requirements,
+functional specifications, CLIs/scripts,
+architecture/performance/observability requirements, profile/API guidance,
+bootstrap tools, codemods, code intelligence, and team knowledge sources.
+External computational integrations remain capability adapters and are
+reported unavailable until the current agent confirms a usable integration.
+
 ## Project layout
 
 ```text

@@ -40,6 +40,7 @@ test("initializes a progressive-disclosure CLAUDE.md without overwriting it", ()
   assert.ok(fs.existsSync(path.join(targetRoot, ".claude", "project", "maintainability.json")));
   assert.ok(fs.existsSync(path.join(targetRoot, ".claude", "project", "regression-sensors.json")));
   assert.ok(fs.existsSync(path.join(targetRoot, ".claude", "project", "large-codebase.md")));
+  assert.ok(fs.existsSync(path.join(targetRoot, ".claude", "guides.json")));
   const settings = JSON.parse(fs.readFileSync(path.join(targetRoot, ".claude", "settings.json"), "utf8"));
   assert.ok(settings.permissions.deny.includes("Read(./**/generated/**)"));
   assert.equal(settings.model, "sonnet");

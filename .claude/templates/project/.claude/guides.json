@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "guides": [
+    {"id":"project-entrypoint","execution_type":"inferential","capabilities":["principles","conventions","rules","how-tos"],"resource":{"type":"file","value":"CLAUDE.md"},"selection":{"mode":"always"}},
+    {"id":"architecture-and-patterns","execution_type":"inferential","capabilities":["reference-docs","cross-functional-requirements","architecture-requirements","observability-guidance"],"resource":{"type":"file","value":".claude/project/architecture.md"},"selection":{"mode":"always"}},
+    {"id":"approved-specifications","execution_type":"inferential","capabilities":["functional-specification","performance-requirements"],"resource":{"type":"file","value":".claude/specs/index.json"},"selection":{"mode":"always"}},
+    {"id":"technology-profiles","execution_type":"both","capabilities":["conventions","rules"],"resource":{"type":"glob","value":".claude/profiles/*/guide.md"},"selection":{"mode":"task","path_signals":[".py",".ts",".tsx",".js",".jsx"]}},
+    {"id":"bootstrap-tools","execution_type":"both","capabilities":["bootstrap"],"resource":{"type":"capability","value":"project-bootstrap"},"selection":{"mode":"optional"}},
+    {"id":"harness-cli-and-scripts","execution_type":"computational","capabilities":["cli-tools","scripts"],"resource":{"type":"command","value":"node $CLAUDE_PLUGIN_ROOT/scripts/<selected-harness-command>.js"},"selection":{"mode":"task","path_signals":[".claude/","CLAUDE.md"]}},
+    {"id":"codemod-tools","execution_type":"computational","capabilities":["codemods"],"resource":{"type":"capability","value":"codemod"},"selection":{"mode":"optional"}},
+    {"id":"code-intelligence","execution_type":"computational","capabilities":["code-intelligence"],"resource":{"type":"capability","value":"lsp"},"selection":{"mode":"optional"}},
+    {"id":"team-knowledge","execution_type":"both","capabilities":["knowledge-source"],"resource":{"type":"capability","value":"knowledge-mcp"},"selection":{"mode":"optional"}},
+    {"id":"api-documentation","execution_type":"both","capabilities":["api-docs"],"resource":{"type":"capability","value":"api-docs"},"selection":{"mode":"optional"}}
+  ]
+}
