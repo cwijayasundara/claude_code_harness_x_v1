@@ -1,1 +1,6 @@
-sensors: []
+sensors:
+  - id: typescript-language-sast
+    label: TypeScript and JavaScript static security analysis
+    command: semgrep
+    args: ["scan", "--config", "auto", "--error", "."]
+    extensions: [".ts", ".tsx", ".js", ".jsx", ".mts", ".cts"]

@@ -28,6 +28,17 @@ test("refuses an implicit repository-wide scan", () => {
   assert.throws(() => buildCodeMap(root, [], undefined, ["app"]), /explicit --path scope/);
 });
 
+test("maps scopes containing more than 500 source files", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "brownfield-map-"));
+  fs.mkdirSync(path.join(root, "src"));
+  for (let index = 0; index < 501; index += 1) {
+    fs.writeFileSync(path.join(root, "src", `module-${index}.js`), "module.exports = {};\n");
+  }
+  const map = buildCodeMap(root, ["src"], undefined, ["module-500"]);
+  assert.equal(map.inventory.source_files, 501);
+  assert.ok(map.maps.impact.some((item) => item.path === "src/module-500.js"));
+});
+
 test("rejects graph adapter edges without provenance", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "brownfield-map-"));
   fs.mkdirSync(path.join(root, "src"));

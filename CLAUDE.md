@@ -36,6 +36,10 @@ knowledge in the target repository.
   files.
 - Keep context proportional to the task; inspect the smallest relevant paths
   and canonical local pattern before making a change.
+- When compacting, preserve the active change/story IDs, approved decisions,
+  modified paths, verification commands and results, and unresolved decisions.
+- Run concurrent editing sessions in separate Git worktrees so changes cannot
+  collide.
 
 ## Target-project guidance
 

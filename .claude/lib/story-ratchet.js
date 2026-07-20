@@ -4,6 +4,7 @@ const crypto = require("node:crypto");
 const { spawnSync } = require("node:child_process");
 const { currentBranch } = require("./specifications");
 const { assertStoryContractEvolution } = require("./design-evolution");
+const { appendEvent, CLASSIFICATIONS } = require("./improvement-ratchet");
 
 const STATES = ["READY", "RED_TEST", "IMPLEMENT", "STORY_REVIEW", "FAST_SENSORS", "STORY_VERIFIED", "HUMAN_DECISION_REQUIRED"];
 const CONTRACT_ARRAYS = [
@@ -232,6 +233,21 @@ function recordReview(root, storyId, file) {
     loaded.state.updated_at = new Date().toISOString();
   } else appendTransition(loaded.state, "HUMAN_DECISION_REQUIRED", evidence.path);
   writeJson(loaded.file, loaded.state);
+  if (verdict.verdict !== "pass") {
+    const findings = verdict.blocking_findings.length ? verdict.blocking_findings : [{ evidence: verdict.required_human_decisions.join("; ") }];
+    for (const finding of findings) {
+      const classification = CLASSIFICATIONS.has(finding.classification) ? finding.classification : "unclassified";
+      appendEvent(root, {
+        event_key: crypto.createHash("sha256").update(`${evidence.sha256}:${classification}:${finding.affected_path || "decision"}`).digest("hex"),
+        change_id: loaded.state.change_id, story_id: loaded.state.story_id,
+        stage: "STORY_REVIEW", type: verdict.verdict === "revise" ? "validator-finding" : "human-decision-required",
+        classification, severity: verdict.verdict === "revise" ? "blocking" : "high",
+        repair: { required: verdict.verdict === "revise", succeeded: false },
+        summary: finding.evidence || finding.required_action || "Review did not pass.",
+        evidence_refs: [{ label: "validator-review", path: evidence.path, sha256: evidence.sha256 }],
+      });
+    }
+  }
   return loaded.state;
 }
 
@@ -257,6 +273,12 @@ function finishRepair(root, storyId, { outcome, evidence }) {
   loaded.state.active_repair = { ...loaded.state.active_repair, outcome, evidence, completed_at: new Date().toISOString() };
   if (outcome !== "passed") appendTransition(loaded.state, "HUMAN_DECISION_REQUIRED", evidence);
   writeJson(loaded.file, loaded.state);
+  appendEvent(root, {
+    event_key: crypto.createHash("sha256").update(`${loaded.state.change_id}:${storyId}:repair:${loaded.state.active_repair.attempt}:${outcome}`).digest("hex"),
+    change_id: loaded.state.change_id, story_id: storyId, stage: "IMPLEMENT", type: "repair-outcome",
+    classification: "unclassified", severity: outcome === "passed" ? "advisory" : "high",
+    repair: { required: true, succeeded: outcome === "passed", outcome }, summary: loaded.state.active_repair.failure,
+  });
   return loaded.state;
 }
 
@@ -288,6 +310,12 @@ function verify(root, storyId) {
   for (const actual of productChanges(root)) if (!withinScope(actual, contract.allowed_change_scope)) throw new Error(`Git change '${actual}' is outside allowed_change_scope.`);
   appendTransition(loaded.state, "STORY_VERIFIED", loaded.state.evidence.fast_sensors.path);
   writeJson(loaded.file, loaded.state);
+  appendEvent(root, {
+    event_key: crypto.createHash("sha256").update(`${loaded.state.change_id}:${storyId}:verified:${loaded.state.evidence.fast_sensors.sha256}`).digest("hex"),
+    change_id: loaded.state.change_id, story_id: storyId, stage: "STORY_VERIFIED", type: "story-verified",
+    classification: "unclassified", severity: "info", measurements: { repair_count: loaded.state.repair_attempts },
+    evidence_refs: [{ label: "fast-sensors", path: loaded.state.evidence.fast_sensors.path, sha256: loaded.state.evidence.fast_sensors.sha256 }],
+  });
   return loaded.state;
 }
 

@@ -1,1 +1,6 @@
-sensors: []
+sensors:
+  - id: langgraph-sast
+    label: LangGraph static security analysis
+    command: semgrep
+    args: ["scan", "--config", "auto", "--error", "."]
+    extensions: [".py"]

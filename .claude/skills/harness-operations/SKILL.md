@@ -32,6 +32,7 @@ passing result.
 | Run or watch profile sensors, inspect agent status, or run CI | `harness-sensors.js`, `harness-sensor-watch.js`, `harness-status.js`, or `harness-ci.js` |
 | Preview/apply an additive upgrade (missing files + merge new baseline controls such as file-size / near-duplication; never overwrites existing policy files) | `harness-upgrade.js [--target .] [--apply]` |
 | Run matched canaries or the release gate | `harness-p7-canary.js` or `harness-release-check.js` |
+| Record learning evidence or operate a human-approved harness experiment | `harness-improvement.js` |
 | Create an explicitly approved sensor waiver | `harness-waiver.js` |
 
 Run plugin helpers using `node "$CLAUDE_PLUGIN_ROOT/scripts/<helper>.js"`.

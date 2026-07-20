@@ -6,6 +6,7 @@ const { validateHarnessConfig } = require("../lib/harness-config");
 const { loadControlManifest } = require("../lib/control-manifest");
 const { loadWaivers } = require("../lib/sensor-waivers");
 const { evaluatePilots } = require("../lib/pilot-evidence");
+const { learningStatus } = require("../lib/improvement-ratchet");
 
 const argumentsParsed = process.argv.slice(2);
 const agentMode = argumentsParsed.includes("--agent");
@@ -112,6 +113,13 @@ try {
   process.stdout.write("\n## Real-pilot readiness\n");
   process.stdout.write(`- Status: ${pilot.status}; rollout authority: human\n`);
   process.stdout.write(`- Evidence: ${pilot.metrics.pilot_counts.greenfield} greenfield, ${pilot.metrics.pilot_counts.brownfield} brownfield pilot(s)\n`);
+
+  const learning = learningStatus(root);
+  process.stdout.write("\n## Harness improvement ratchet\n");
+  process.stdout.write(`- Observations: ${learning.event_count}\n`);
+  process.stdout.write(`- Corroborated patterns: ${learning.patterns.filter((item) => item.status === "CORROBORATED").length}\n`);
+  process.stdout.write(`- Candidates: ${learning.candidates.length}; promotion authority: human\n`);
+  for (const candidate of learning.candidates) process.stdout.write(`  - ${candidate.candidate_id}: ${candidate.state} (${candidate.classification})\n`);
 
   const evidenceDirectory = path.join(root, ".claude", "specs", "evidence", "runtime");
   const sensorReportPath = path.join(evidenceDirectory, "sensor-report.json");

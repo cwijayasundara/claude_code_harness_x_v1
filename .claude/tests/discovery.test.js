@@ -38,3 +38,23 @@ test("renders a concise, actionable discovery report", () => {
   assert.match(report, /Brownfield discovery: PE-001-discovery/);
   assert.match(report, /canonical existing pattern/);
 });
+
+test("does not duplicate files from overlapping scopes", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "harness-discovery-"));
+  fs.mkdirSync(path.join(root, "src", "feature"), { recursive: true });
+  fs.writeFileSync(path.join(root, "src", "feature", "one.js"), "module.exports = {};\n");
+  fs.writeFileSync(path.join(root, "src", "feature", "two.js"), "module.exports = {};\n");
+
+  const result = discover(root, ["src", "src/feature"]);
+  assert.deepEqual(result.sourceFiles, ["src/feature/one.js", "src/feature/two.js"]);
+});
+
+test("ignores generated and vendored trees during fallback discovery", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "harness-discovery-"));
+  for (const directory of ["src", "vendor", "generated"]) fs.mkdirSync(path.join(root, directory));
+  fs.writeFileSync(path.join(root, "src", "app.ts"), "export const app = true;\n");
+  fs.writeFileSync(path.join(root, "vendor", "sdk.ts"), "export const sdk = true;\n");
+  fs.writeFileSync(path.join(root, "generated", "schema.ts"), "export const schema = true;\n");
+
+  assert.deepEqual(discover(root, ["."]).sourceFiles, ["src/app.ts"]);
+});

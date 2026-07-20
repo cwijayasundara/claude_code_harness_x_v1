@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const ignoredDirectories = new Set([".claude", ".git", ".venv", "venv", "node_modules", "dist", "build", "coverage", ".next"]);
+const ignoredDirectories = new Set([".claude", ".git", ".venv", "venv", "node_modules", "dist", "build", "coverage", ".next", "vendor", "generated"]);
 const sourceExtensions = new Set([".py", ".ts", ".tsx", ".js", ".jsx", ".java", ".go", ".rs"]);
 
 function withinRoot(root, candidate) {
@@ -11,6 +11,8 @@ function withinRoot(root, candidate) {
 function walkFiles(root, scopedPaths = []) {
   const starts = scopedPaths.length === 0 ? [root] : scopedPaths.map((scope) => path.resolve(root, scope));
   const files = [];
+  const seenFiles = new Set();
+  const seenDirectories = new Set();
   const skipped = [];
 
   for (const start of starts) {
@@ -25,13 +27,23 @@ function walkFiles(root, scopedPaths = []) {
       const current = pending.pop();
       const stat = fs.statSync(current);
       if (stat.isFile()) {
-        files.push(path.relative(root, current));
+        const relative = path.relative(root, current);
+        if (seenFiles.has(relative)) continue;
+        seenFiles.add(relative);
+        files.push(relative);
         continue;
       }
+      if (seenDirectories.has(current)) continue;
+      seenDirectories.add(current);
 
       for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
         if (entry.isDirectory() && !ignoredDirectories.has(entry.name)) pending.push(path.join(current, entry.name));
-        if (entry.isFile()) files.push(path.relative(root, path.join(current, entry.name)));
+        if (entry.isFile()) {
+          const relative = path.relative(root, path.join(current, entry.name));
+          if (seenFiles.has(relative)) continue;
+          seenFiles.add(relative);
+          files.push(relative);
+        }
       }
     }
   }

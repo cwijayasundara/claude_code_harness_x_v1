@@ -4,7 +4,6 @@ const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 const { discover } = require("./discovery");
 
-const MAX_SOURCE_FILES = 500;
 const MAX_FILE_BYTES = 1024 * 1024;
 
 function digest(buffer) {
@@ -174,7 +173,6 @@ function buildCodeMap(root, scopedPaths, adapterFile, focusTerms = []) {
   if (!focusTerms.length) throw new Error("At least one --focus path, module, or symbol is required to bound impact analysis.");
   const projectRoot = path.resolve(root);
   const inventory = discover(projectRoot, scopedPaths);
-  if (inventory.sourceFiles.length > MAX_SOURCE_FILES) throw new Error(`Scope contains ${inventory.sourceFiles.length} source files; narrow it below ${MAX_SOURCE_FILES + 1}.`);
   const nodes = [];
   const edges = [];
   const skipped = [...inventory.skipped.map((item) => ({ path: item, reason: "missing scope" }))];
@@ -233,7 +231,7 @@ function buildCodeMap(root, scopedPaths, adapterFile, focusTerms = []) {
     generated_at: new Date().toISOString(),
     scope: scopedPaths,
     focus: focusTerms,
-    limits: { max_source_files: MAX_SOURCE_FILES, max_file_bytes: MAX_FILE_BYTES },
+    limits: { max_file_bytes: MAX_FILE_BYTES },
     inventory: { files: inventory.files.length, source_files: inventory.sourceFiles.length, signals: inventory.signals, skipped },
     graph: { nodes: allNodes, edges: allEdges },
     maps: { roles: roleMap, public_entry_candidates: roleMap.boundary || [], tests: roleMap.test || [], canonical_reuse_candidates: canonicalCandidates, impact, hotspots, duplicate_candidates: duplicateCandidates },
@@ -246,7 +244,6 @@ function buildCodeMap(root, scopedPaths, adapterFile, focusTerms = []) {
 module.exports = {
   ADAPTER_CONFIDENCE,
   MAX_FILE_BYTES,
-  MAX_SOURCE_FILES,
   buildCodeMap,
   loadAdapter,
   validateAdapterExport,

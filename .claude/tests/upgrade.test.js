@@ -29,6 +29,8 @@ test("upgrade previews and adds only missing harness files", () => {
   assert.equal(fs.readFileSync(path.join(root, "CLAUDE.md"), "utf8"), "# Local guidance\n");
   assert.ok(fs.existsSync(path.join(root, ".claude", "harness-install.json")));
   assert.ok(fs.existsSync(path.join(root, ".claude", "project", "maintainability.json")));
+  assert.ok(fs.existsSync(path.join(root, ".claude", "project", "large-codebase.md")));
+  assert.ok(fs.existsSync(path.join(root, ".claude", "settings.json")));
 
   const receipt = JSON.parse(fs.readFileSync(path.join(root, ".claude", "harness-install.json"), "utf8"));
   assert.equal(receipt.installed_plugin, "lean-expert-generalist-harness");

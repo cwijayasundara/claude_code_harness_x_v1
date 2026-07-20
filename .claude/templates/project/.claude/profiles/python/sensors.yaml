@@ -1,1 +1,6 @@
-sensors: []
+sensors:
+  - id: python-language-sast
+    label: Python language static security analysis
+    command: semgrep
+    args: ["scan", "--config", "auto", "--error", "."]
+    extensions: [".py", ".pyi"]

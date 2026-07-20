@@ -1,1 +1,6 @@
-sensors: []
+sensors:
+  - id: deepagents-sast
+    label: Deep Agents static security analysis
+    command: semgrep
+    args: ["scan", "--config", "auto", "--error", "."]
+    extensions: [".py"]

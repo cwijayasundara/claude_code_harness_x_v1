@@ -20,8 +20,20 @@ test("ships separated generator and read-only evaluator roles", () => {
   assert.match(evaluator, /model: opus/);
   assert.match(evaluator, /disallowedTools: Write, Edit/);
   assert.match(evaluator, /not the generator's helper/);
+  assert.match(evaluator, /Do not create blocking findings for style/);
   assert.match(fastEvaluator, /model: haiku/);
   assert.match(fastEvaluator, /disallowedTools: Write, Edit/);
+  assert.match(fastEvaluator, /do not create\nblocking findings for style/);
+});
+
+test("preserves best-practice context and UI verification guidance", () => {
+  const projectGuide = read("templates/project/CLAUDE.md");
+  const reactGuide = read("templates/project/.claude/profiles/react-typescript/guide.md");
+
+  assert.match(projectGuide, /When compacting, preserve active change\/story IDs/);
+  assert.match(projectGuide, /separate Git worktree/);
+  assert.match(reactGuide, /compare a fresh\n  browser screenshot/);
+  assert.match(reactGuide, /tests and type checks do not\n  replace this visual verification/);
 });
 
 test("uses native plugin component discovery and routing policy", () => {

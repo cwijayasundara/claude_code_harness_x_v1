@@ -21,7 +21,10 @@ scope beyond one ordinary story, return `human-decision-required` and require
 routing to `harness-evaluator`.
 
 Otherwise apply the same acceptance, behavior, regression, scope, and evidence
-standard as the strong evaluator. Return one JSON object with no prose:
+standard as the strong evaluator. Report only gaps that affect correctness,
+stated requirements, approved constraints, or material risk; do not create
+blocking findings for style preferences or speculative hardening outside the
+approved scope. Return one JSON object with no prose:
 
 ```json
 {

@@ -87,11 +87,24 @@ branch review. Haiku validation is disabled until matched cases preserve
 first-pass acceptance without more defects, repairs, or human review time and a
 human enables promotion.
 
+Initialized projects also default the main session to Sonnet at medium effort,
+cap fixed extended-thinking budgets at 8,000 tokens, keep auto-compaction on,
+and default dynamic workflows to small Sonnet teams. Their status line displays
+live context percentage, estimated API-session cost, effort/thinking state, and
+subscription limit usage when Claude Code provides it. At 70% context it warns;
+at 85% it recommends compacting or clearing. The dollar value is a local
+estimate, not authoritative billing.
+
 Context packs have role budgets. Requirements, approved decisions, invariants,
 and expected test results are never compressed. Only verbose tool output may be
 excerpted, with file hash and line provenance. Usage/cost is recorded only from
 durable provider or session evidence; observed ceilings are not misrepresented
 as provider-enforced limits.
+
+Large repositories are handled through package/subsystem-scoped discovery,
+generated/vendor read-deny defaults, layered project guidance, optional sparse
+worktrees, and a preference for LSP/code-intelligence navigation over broad
+scans. Static mapping has no source-file-count ceiling.
 
 ## Project layout
 

@@ -16,6 +16,10 @@ Use this profile only for React/TypeScript code in this repository. Follow the e
 
 - Test user-observable behaviour rather than implementation details.
 - Cover loading, error, and key domain states.
+- For observable UI or layout changes, run the application and compare a fresh
+  browser screenshot with the approved design or baseline. Record the observed
+  differences, fixes, and final visual evidence; tests and type checks do not
+  replace this visual verification.
 - Add Playwright only for stable, high-value journeys; do not create broad browser suites by default.
 
 ## Sensor commands

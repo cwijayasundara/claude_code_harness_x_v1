@@ -120,6 +120,9 @@ function planUpgrade(targetRoot, pluginRoot) {
     ".claude/harness-install.json",
     ".claude/project/boundaries.json",
     MAINTAINABILITY_REL,
+    ".claude/project/large-codebase.md",
+    ".claude/settings.json",
+    ".claude/scripts/harness-cost-statusline.js",
     ".claude/domains/private-equity/sensors.yaml",
   ];
   for (const relativePath of watchFiles) {

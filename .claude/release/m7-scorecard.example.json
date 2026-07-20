@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-07-19T17:19:45.255Z",
+  "generated_at": "2026-07-20T05:06:06.287Z",
   "measurement_type": "m7-release-and-pilot-scorecard",
   "decision_authority": "human",
   "never_auto_merges": true,
@@ -23,9 +23,9 @@
   "harness": {
     "status": "synthetic-controls-ready",
     "control_budget": {
-      "active": 11,
-      "max_active": 14,
-      "baseline": 11,
+      "active": 15,
+      "max_active": 18,
+      "baseline": 15,
       "net_adds": [],
       "headroom": 3
     },
@@ -37,7 +37,7 @@
   },
   "pilot": {
     "schema_version": 1,
-    "generated_at": "2026-07-19T17:19:45.254Z",
+    "generated_at": "2026-07-20T05:06:06.287Z",
     "status": "insufficient-evidence",
     "decision_authority": "human",
     "policy": {
@@ -135,8 +135,8 @@
   },
   "subtraction": {
     "schema_version": 1,
-    "generated_at": "2026-07-19T17:19:45.255Z",
-    "as_of": "2026-07-19T17:19:45.253Z",
+    "generated_at": "2026-07-20T05:06:06.287Z",
+    "as_of": "2026-07-20T05:06:06.286Z",
     "decision_authority": "human",
     "applies_automatically": false,
     "sensor_outcomes_available": false,
@@ -147,7 +147,7 @@
         "severity": "advisory",
         "reason": "No .claude/state/sensor-outcomes.jsonl yet; zero-fire retirement cannot be data-driven until outcomes are recorded.",
         "evidence": {
-          "ledger": "/var/folders/m_/tqtx1ykn03l97jvspxx7wc640000gn/T/harness-m7-release-wJS7rh/.claude/state/sensor-outcomes.jsonl"
+          "ledger": "/var/folders/m_/tqtx1ykn03l97jvspxx7wc640000gn/T/harness-m7-release-C8G9ky/.claude/state/sensor-outcomes.jsonl"
         }
       }
     ],

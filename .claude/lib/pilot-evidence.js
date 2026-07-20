@@ -1,6 +1,7 @@
 const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
+const { appendEvent } = require("./improvement-ratchet");
 
 const DEFAULT_POLICY = Object.freeze({
   schema_version: 1,
@@ -91,6 +92,22 @@ function recordPilot(root, input) {
   fs.mkdirSync(directory, { recursive: true });
   if (fs.existsSync(file)) throw new Error(`Pilot record is immutable and already exists: ${normalized.pilot_id}`);
   fs.writeFileSync(file, `${JSON.stringify(normalized, null, 2)}\n`, "utf8");
+  if (normalized.escaped_defects > 0) appendEvent(projectRoot, {
+    event_key: `pilot:${normalized.pilot_id}:escaped-defect`,
+    change_id: normalized.change_id, stage: "OPERATIONS", type: "escaped-defect",
+    classification: "operations.escaped-defect", severity: "high",
+    measurements: { escaped_defects: normalized.escaped_defects },
+    summary: `${normalized.escaped_defects} escaped defect(s) observed during pilot ${normalized.pilot_id}.`,
+    evidence_refs: [{ label: "pilot-record", path: path.relative(projectRoot, file) }],
+  });
+  if (normalized.outcome === "rejected") appendEvent(projectRoot, {
+    event_key: `pilot:${normalized.pilot_id}:rejected`,
+    change_id: normalized.change_id, stage: "PILOT", type: "pilot-rejected",
+    classification: "unclassified", severity: "blocking",
+    measurements: { human_review_minutes: normalized.human_review_minutes, provider_cost_usd: normalized.provider_cost_usd },
+    summary: `Pilot ${normalized.pilot_id} was rejected.`,
+    evidence_refs: [{ label: "pilot-record", path: path.relative(projectRoot, file) }],
+  });
   return { record: normalized, file };
 }
 

@@ -125,10 +125,10 @@
       "scope": "Selected changed paths, or the project-wide verification scope.",
       "owner": "Security owner",
       "introduced_for": "Credentials or private keys accidentally committed by an agent.",
-      "cost": "Fast deterministic pattern scan.",
+      "cost": "Fast built-in pattern scan plus a repository-wide Gitleaks scan.",
       "review_date": "2026-10-01",
       "removal_criteria": "Replace only with an equivalent or stronger secret scanner.",
-      "execution": "Built-in harness-sensors secret scanner.",
+      "execution": "Built-in harness-sensors patterns plus Gitleaks directory scanning; CI fails closed when Gitleaks is unavailable.",
       "self_correction": "Remove and rotate the exposed credential, then rerun the scan on the affected paths."
     },
     {

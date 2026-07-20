@@ -46,6 +46,11 @@ new service, dashboard, workflow engine, hook, agent, or general framework.
     missing files (including `maintainability.json`) and **merges** new baseline
     controls (`file-size`, `near-duplication`) into `harness-manifest.json`
     without overwriting local control customizations.
+14. Harness learning is an evidence-to-experiment ratchet, not autonomous
+    self-editing. `lib/improvement-ratchet.js` records hash-backed observations,
+    corroborates recurring patterns across independent work, requires explicit
+    human experiment approval, evaluates a fixed hypothesis and protected
+    guardrails, and emits eligibility only. Promotion remains a human Git change.
 
 Model quality, provider cost, human review time, and escaped defects cannot be
 proven by deterministic unit tests. Label synthetic measures honestly and keep

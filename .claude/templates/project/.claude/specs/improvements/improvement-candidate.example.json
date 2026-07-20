@@ -1,0 +1,22 @@
+{
+  "candidate_id": "imp-001",
+  "classification": "verification.missing-test",
+  "evidence_event_ids": ["replace-with-three-corroborated-event-ids"],
+  "diagnosis": {
+    "observed_problem": "Describe the recurring, evidence-backed failure.",
+    "suspected_upstream_stage": "G2",
+    "confidence": 0.7,
+    "alternative_explanations": ["Describe at least one competing explanation."]
+  },
+  "proposed_change": {
+    "type": "replace",
+    "target": "existing-control-id",
+    "summary": "Describe the smallest proposed harness change."
+  },
+  "hypothesis": {
+    "metric": "missing_tests_per_story",
+    "expected_direction": "decrease",
+    "minimum_improvement": 0.25
+  },
+  "guardrails": []
+}

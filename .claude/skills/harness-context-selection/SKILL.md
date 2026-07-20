@@ -24,6 +24,10 @@ Before planning or changing code:
    Graphify, or CCE bounded export; otherwise use the harness's deterministic
    static-source fallback. Every relationship must retain extracted/inferred
    provenance. Open the cited implementation and tests before relying on it.
+   In a monorepo or large tree, read `.claude/project/large-codebase.md`, scope
+   `--path` to packages/subsystems, and prefer code intelligence over a fallback
+   scan. Large scopes are supported, but narrower scopes reduce inventory time
+   and keep the resulting graph and model context focused.
 6. Broaden scope or use text search only when the bounded map cannot answer a
    named question. Record the gap instead of pretending the graph is complete.
 

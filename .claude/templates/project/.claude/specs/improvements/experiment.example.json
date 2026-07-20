@@ -1,0 +1,14 @@
+{
+  "experiment_id": "exp-001",
+  "candidate_id": "imp-001",
+  "approved_by": "replace-with-human-identity",
+  "baseline_harness_sha256": "replace-with-baseline-hash",
+  "treatment_harness_sha256": "replace-with-distinct-treatment-hash",
+  "eligible_cohort": {
+    "profiles": ["typescript"],
+    "mode": "matched-shadow"
+  },
+  "minimum_sample_size": 3,
+  "maximum_cost_usd": 10,
+  "expires_at": "2026-12-31T23:59:59.000Z"
+}

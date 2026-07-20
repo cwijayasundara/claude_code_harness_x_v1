@@ -8,7 +8,7 @@
     { "id": "local-smoke", "label": "Local public-seam smoke", "cadence": "pre-pr", "kind": "local-smoke", "configured": false, "hermetic": true, "boundary_ids": [], "public_seam": "replace with HTTP, CLI, UI, event, or library seam", "safe_local_config": "replace with the local-only configuration profile and doubled dependencies", "journeys": [{ "id": "replace-success", "type": "success" }, { "id": "replace-failure", "type": "failure" }], "configuration_help": "Start safely and exercise approved success and failure journeys through a public seam." },
     { "id": "lint", "label": "Full lint", "cadence": "pre-pr", "kind": "lint", "configured": false, "configuration_help": "Set the repository-wide lint command." },
     { "id": "type", "label": "Full type check", "cadence": "pre-pr", "kind": "type", "configured": false, "configuration_help": "Set the repository-wide compiler/type command." },
-    { "id": "security", "label": "Security checks", "cadence": "pre-pr", "kind": "security", "configured": false, "configuration_help": "Set the approved SAST, dependency, and secret verification entry point." }
+    { "id": "security", "label": "Security checks", "cadence": "pre-pr", "kind": "security", "configured": false, "configuration_help": "Set one repository-owned command that runs Gitleaks over Git history, Semgrep with pinned project rules, dependency audit, and applicable container/IaC scans." }
   ],
   "boundaries": [],
   "performance_budgets": []

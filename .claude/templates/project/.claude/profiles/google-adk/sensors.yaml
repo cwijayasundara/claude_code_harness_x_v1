@@ -1,1 +1,6 @@
-sensors: []
+sensors:
+  - id: google-adk-sast
+    label: Google ADK static security analysis
+    command: semgrep
+    args: ["scan", "--config", "auto", "--error", "."]
+    extensions: [".py"]

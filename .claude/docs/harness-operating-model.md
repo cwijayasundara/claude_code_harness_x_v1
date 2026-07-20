@@ -48,9 +48,14 @@ unexplained commands.
 
 Built-in computational sensors always available from `harness-sensors.js`
 (**same set for vibe / outside-the-loop and `/harness` / on-the-loop**):
-secret-scan, architecture-boundaries, **file-size**, **function-size**,
+secret-scan (built-in patterns plus Gitleaks), architecture-boundaries, **file-size**, **function-size**,
 **exception-handling**, **logging-discipline**, **performance-heuristics**, and
 **near-duplication** (thresholds in `.claude/project/maintainability.json`).
+Gitleaks unavailability is advisory in an interactive run and blocking under
+`harness-ci.js --all --fail-on-warn`. Active language and framework profiles
+also run Semgrep; the fail-closed pre-PR `security` command should combine
+Gitleaks history scanning, Semgrep, dependency audit, and any applicable
+container or infrastructure scanner.
 
 Add a sensor only for a recurring, observable failure. Before making it
 blocking, establish a small baseline and review:

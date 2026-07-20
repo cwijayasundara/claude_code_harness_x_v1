@@ -25,6 +25,8 @@ test("initializes a progressive-disclosure CLAUDE.md without overwriting it", ()
   assert.match(firstRun, /CREATE .*CLAUDE\.md/);
   assert.match(generatedGuide, /entry-point map, not the full operating manual/);
   assert.match(generatedGuide, /\.claude\/project\/architecture\.md/);
+  assert.match(generatedGuide, /When compacting, preserve active change\/story IDs/);
+  assert.match(generatedGuide, /separate Git worktree/);
   const controlManifest = JSON.parse(fs.readFileSync(path.join(targetRoot, ".claude", "harness-manifest.json"), "utf8"));
   assert.equal(controlManifest.version, 1);
   assert.ok(controlManifest.controls.some((control) => control.id === "profile-verification"));
@@ -35,6 +37,17 @@ test("initializes a progressive-disclosure CLAUDE.md without overwriting it", ()
   assert.ok(controlManifest.control_budget.baseline_ids.includes("exception-handling"));
   assert.ok(controlManifest.control_budget.baseline_ids.includes("near-duplication"));
   assert.ok(fs.existsSync(path.join(targetRoot, ".claude", "project", "maintainability.json")));
+  assert.ok(fs.existsSync(path.join(targetRoot, ".claude", "project", "large-codebase.md")));
+  const settings = JSON.parse(fs.readFileSync(path.join(targetRoot, ".claude", "settings.json"), "utf8"));
+  assert.ok(settings.permissions.deny.includes("Read(./**/generated/**)"));
+  assert.equal(settings.model, "sonnet");
+  assert.equal(settings.effortLevel, "medium");
+  assert.equal(settings.autoCompactEnabled, true);
+  assert.equal(settings.env.MAX_THINKING_TOKENS, "8000");
+  assert.equal(settings.teammateDefaultModel, "sonnet");
+  assert.equal(settings.workflowSizeGuideline, "small");
+  assert.match(settings.statusLine.command, /harness-cost-statusline\.js/);
+  assert.ok(fs.existsSync(path.join(targetRoot, ".claude", "scripts", "harness-cost-statusline.js")));
   assert.ok(fs.existsSync(path.join(targetRoot, ".claude", "specs", "vibe-to-harness.template.md")));
 
   fs.writeFileSync(guidePath, "# Existing project guide\n");

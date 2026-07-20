@@ -8,7 +8,7 @@ const { createSensorResult, reportStatus } = require("../lib/sensor-contract");
 const { loadSensorProfile, isApplicable } = require("../lib/sensor-profile");
 const { loadSensorProfileFile } = require("../lib/sensor-profile");
 const { checkBoundaries } = require("../lib/architecture-boundaries");
-const { scanSecrets } = require("../lib/secret-scan");
+const { scanSecrets, runGitleaks } = require("../lib/secret-scan");
 const { runAllMaintainabilitySensors } = require("../lib/maintainability-sensors");
 const { loadWaivers, applyWaiver } = require("../lib/sensor-waivers");
 const { redactEvidence } = require("../lib/evidence-hygiene");
@@ -202,18 +202,30 @@ for (const sensor of domainProfile.sensors) {
 }
 
 const secretFindings = scanSecrets(root, inspectionPaths);
-record(createSensorResult({ sensorId: "secret-scan", ...(secretFindings.length > 0 ? {
+const gitleaks = runGitleaks(root);
+const gitleaksLog = writeLog(root, "secret-scan", gitleaks.output);
+record(createSensorResult({ sensorId: "secret-scan", ...(secretFindings.length > 0 || gitleaks.status === "findings" ? {
   status: "fail",
-  affectedPaths: secretFindings.map((finding) => finding.path),
-  reason: `Potential committed secrets found: ${secretFindings.map((finding) => `${finding.path} (${finding.name})`).join(", ")}.`,
+  affectedPaths: secretFindings.length > 0 ? secretFindings.map((finding) => finding.path) : inspectionPaths,
+  reason: secretFindings.length > 0
+    ? `Potential secrets found: ${secretFindings.map((finding) => `${finding.path} (${finding.name})`).join(", ")}.`
+    : "Gitleaks found one or more potential secrets in the repository.",
   nextAction: "Remove the secret, rotate any exposed credential, and use the approved secret provider.",
-  evidence: "Built-in deterministic secret scan.",
+  evidence: `Built-in deterministic secret scan and ${gitleaksLog}.`,
+} : gitleaks.status === "unavailable" || gitleaks.status === "error" ? {
+  status: "warn",
+  affectedPaths: inspectionPaths.length > 0 ? inspectionPaths : ["."],
+  reason: gitleaks.status === "unavailable"
+    ? "The built-in scan passed, but the required Gitleaks deep secret scan is unavailable."
+    : "The built-in scan passed, but Gitleaks could not complete successfully.",
+  nextAction: "Install Gitleaks and rerun the sensor; CI treats this warning as blocking.",
+  evidence: `Built-in deterministic secret scan and ${gitleaksLog}.`,
 } : {
   status: "pass",
   affectedPaths: inspectionPaths.length > 0 ? inspectionPaths : ["."],
-  reason: "Built-in secret scan found no known credential patterns in the selected scope.",
+  reason: "Built-in pattern scanning and Gitleaks found no potential secrets.",
   nextAction: "No action required.",
-  evidence: "Built-in deterministic secret scan.",
+  evidence: `Built-in deterministic secret scan and ${gitleaksLog}.`,
 }) }));
 
 const boundaryCheck = checkBoundaries(root, inspectionPaths);

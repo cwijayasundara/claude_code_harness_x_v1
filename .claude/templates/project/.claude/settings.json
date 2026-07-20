@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "model": "sonnet",
+  "effortLevel": "medium",
+  "autoCompactEnabled": true,
+  "fastModePerSessionOptIn": true,
+  "teammateDefaultModel": "sonnet",
+  "workflowSizeGuideline": "small",
+  "env": {
+    "MAX_THINKING_TOKENS": "8000"
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "node .claude/scripts/harness-cost-statusline.js",
+    "padding": 0
+  },
+  "permissions": {
+    "deny": [
+      "Read(./**/dist/**)",
+      "Read(./**/build/**)",
+      "Read(./**/coverage/**)",
+      "Read(./**/.next/**)",
+      "Read(./**/vendor/**)",
+      "Read(./**/generated/**)",
+      "Read(./**/*.generated.*)"
+    ]
+  }
+}

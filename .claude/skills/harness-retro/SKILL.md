@@ -12,12 +12,17 @@ adds noise without correction value.
 ## 1. Pull automated nominations (read-only)
 
 ```sh
+node "$CLAUDE_PLUGIN_ROOT/scripts/harness-improvement.js" patterns --root .
+node "$CLAUDE_PLUGIN_ROOT/scripts/harness-improvement.js" status --root .
 node "$CLAUDE_PLUGIN_ROOT/scripts/harness-subtract.js" --write --root .
 node "$CLAUDE_PLUGIN_ROOT/scripts/harness-m7-scorecard.js" --root .
 node "$CLAUDE_PLUGIN_ROOT/scripts/harness-pilot.js" report --root .
 ```
 
 Read:
+- `.claude/state/learning-patterns.json` (derived, rebuildable pattern summary)
+- `.claude/learning/events/*.jsonl` (immutable, hash-backed observations)
+- `.claude/specs/improvements/*.json` (human-gated candidates)
 - `.claude/specs/evidence/control-subtraction-proposals.json`
 - `.claude/specs/evidence/m7-scorecard.json`
 - `.claude/specs/evidence/pilot-readiness.json` (if present)
@@ -43,3 +48,13 @@ For each proposal, include:
 Do not automatically change harness policy, add hooks, or add sensors. Ask for
 human approval first. Rollout remains **human-only** even when pilot status is
 `eligible-for-human-rollout-decision`.
+
+## 3. Run improvements as attributed experiments
+
+Do not edit the baseline harness merely because a proposal sounds plausible.
+Use `harness-improvement.js propose` to register only corroborated candidates,
+then `approve-experiment` with an explicit human identity. Compare baseline and
+treatment results with `evaluate`. Eligibility never applies or promotes the
+change: a human must review the decision artifact and explicitly authorize the
+Git change. Reject a treatment when any protected quality, cost, review-time,
+escaped-defect, or control-budget guardrail regresses.
