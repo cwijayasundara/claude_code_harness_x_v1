@@ -3,6 +3,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
+const { loadOperationsPolicy } = require("../lib/sensor-operations");
 
 const runner = path.join(__dirname, "harness-sensors.js");
 const ignoredDirectories = new Set([".git", ".claude", "node_modules", "dist", "build", ".venv", "venv"]);
@@ -57,6 +58,10 @@ function runSensors(root, changedPaths, receipt) {
     receipt.last_completed_at = new Date().toISOString();
     receipt.last_exit_code = code;
     receipt.last_status = latestSensorStatus(root);
+    if (receipt.mode === "once") {
+      receipt.state = "stopped";
+      receipt.stopped_at = new Date().toISOString();
+    }
     writeReceipt(root, receipt);
     process.stdout.write(`STATUS ${receipt.last_status}; run harness-status.js . --agent for correction guidance.\n`);
   });
@@ -79,6 +84,9 @@ if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) {
 
 const receipt = {
   started_at: new Date().toISOString(),
+  heartbeat_at: new Date().toISOString(),
+  state: "starting",
+  pid: process.pid,
   mode: options.once ? "once" : "watch",
   debounce_ms: options.debounceMs,
   runs: 0,
@@ -87,6 +95,9 @@ const receipt = {
 writeReceipt(root, receipt);
 
 if (options.once) {
+  receipt.state = "running";
+  receipt.backend = "once";
+  writeReceipt(root, receipt);
   runSensors(root, [], receipt);
 } else {
   const pending = new Set();
@@ -123,15 +134,45 @@ if (options.once) {
       clearTimeout(timer);
       timer = setTimeout(flush, options.debounceMs);
     });
+    receipt.backend = "native-recursive";
   } catch (error) {
-    process.stderr.write(`ERROR: Unable to watch ${root}: ${error.message}\n`);
-    process.exit(2);
+    const watchers = [];
+    const visit = (directory) => {
+      const relativeDirectory = path.relative(root, directory);
+      if (relativeDirectory && isIgnored(relativeDirectory)) return;
+      watchers.push(fs.watch(directory, (_event, filename) => {
+        if (!filename) return;
+        const changedPath = path.relative(root, path.join(directory, filename.toString()));
+        if (isIgnored(changedPath)) return;
+        pending.add(changedPath);
+        clearTimeout(timer);
+        timer = setTimeout(flush, options.debounceMs);
+      }));
+      for (const entry of fs.readdirSync(directory, { withFileTypes: true })) if (entry.isDirectory()) visit(path.join(directory, entry.name));
+    };
+    try { visit(root); } catch (fallbackError) {
+      for (const item of watchers) item.close();
+      process.stderr.write(`ERROR: Unable to watch ${root}: ${error.message}; fallback: ${fallbackError.message}\n`);
+      process.exit(2);
+    }
+    watcher = { close: () => watchers.forEach((item) => item.close()) };
+    receipt.backend = "portable-directory-watch";
   }
 
+  receipt.state = "running";
+  receipt.heartbeat_at = new Date().toISOString();
+  writeReceipt(root, receipt);
+  const { policy } = loadOperationsPolicy(root);
+  const heartbeat = setInterval(() => {
+    receipt.heartbeat_at = new Date().toISOString();
+    writeReceipt(root, receipt);
+  }, Math.max(1000, Math.floor(policy.watch_heartbeat_seconds * 500)));
   process.stdout.write(`WATCH ${root} (debounce ${options.debounceMs}ms). Press Ctrl-C to stop.\n`);
   function stop() {
     watcher.close();
     clearTimeout(timer);
+    clearInterval(heartbeat);
+    receipt.state = "stopped";
     receipt.stopped_at = new Date().toISOString();
     writeReceipt(root, receipt);
     process.stdout.write("WATCH stopped.\n");
@@ -139,4 +180,12 @@ if (options.once) {
   }
   process.on("SIGINT", stop);
   process.on("SIGTERM", stop);
+  process.on("uncaughtException", (error) => {
+    receipt.state = "crashed";
+    receipt.error = error.message;
+    receipt.stopped_at = new Date().toISOString();
+    writeReceipt(root, receipt);
+    process.stderr.write(`ERROR: Sensor watcher crashed: ${error.message}\n`);
+    process.exit(2);
+  });
 }

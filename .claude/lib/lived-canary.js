@@ -5,6 +5,7 @@ const { execFileSync } = require("node:child_process");
 const specs = require("./specifications");
 const ratchet = require("./story-ratchet");
 const { finalizeBranch, verifyBranch } = require("./branch-verification");
+const { workspaceFingerprint } = require("./sensor-scope");
 const {
   buildImplementationEvidence,
   buildRedEvidence,
@@ -49,6 +50,40 @@ function baseArtifact(changeId, sourceId, id, packageName, content, derivedFrom 
     approved_at: null,
     content,
   };
+}
+
+function registerSpdd(root, changeId, sourceId) {
+  const analysisId = `${changeId}-analysis`;
+  register(root, baseArtifact(changeId, sourceId, analysisId, "analysis", {
+    domain_concepts: ["todo"],
+    strategic_direction: ["Deliver the smallest source-grounded vertical slice."],
+    risks: ["Preserve validation and public behavior."],
+    requirement_gaps: ["No material gaps in the canary fixture."],
+  }, [`${changeId}-prd`]));
+  register(root, baseArtifact(changeId, sourceId, `${changeId}-reasons`, "reasons-canvas", {
+    requirements: ["Implement the captured PRD outcomes and definition of done."],
+    entities: ["Todo with title, id, and completion state."],
+    approach: ["Use focused TDD at the public module seam."],
+    structure: ["Keep behavior in the existing todo module."],
+    operations: ["Write a failing test, implement, verify, and review."],
+    norms: ["Small functions and deterministic tests."],
+    safeguards: ["No external services or unrelated scope."],
+    sync: { status: "aligned", amendment_ids: [] },
+  }, [analysisId]));
+}
+
+function traceLinks(contract, sourceLocation, checkId = "unit-suite") {
+  return contract.source_requirements.flatMap((requirementId) => contract.acceptance_criteria.map((acceptanceCriterionId) => ({
+    requirement_id: requirementId,
+    source_location: sourceLocation,
+    story_id: contract.story_id,
+    acceptance_criterion_id: acceptanceCriterionId,
+    test_case_id: contract.test_case_ids[0],
+    level: "unit",
+    disposition: "planned-automated",
+    verification_check_id: checkId,
+    risk_tags: [],
+  })));
 }
 
 function proposalAndApprove(root, changeId, gate, approver) {
@@ -358,6 +393,7 @@ function runLivedCanary(options = {}) {
       assumptions: ["Ids may be opaque strings for the unit seam."],
       open_questions: [],
     }));
+    registerSpdd(root, changeId, sourceId);
     const g0 = proposalAndApprove(root, changeId, "G0", approver);
 
     // --- G1 ---
@@ -367,15 +403,19 @@ function runLivedCanary(options = {}) {
     }));
     register(root, baseArtifact(changeId, sourceId, storyId, "stories", {
       title: "Create a todo with defaults",
+      size: "low", story_points: 2, estimate_confidence: "high",
+      estimate_basis: ["One module seam and two focused acceptance cases."],
       acceptance_criteria: [
         "createTodo(title) returns { id, title, done: false }",
         "createTodo(\"\") throws",
       ],
     }, [`${changeId}-epic`]));
     register(root, baseArtifact(changeId, sourceId, `${changeId}-deps`, "dependencies", {
-      dag: [{ story_id: storyId, depends_on: [] }],
-      sequence: [storyId],
+      nodes: [{ story_id: storyId }], edges: [],
     }, [storyId]));
+    register(root, baseArtifact(changeId, sourceId, `${changeId}-allocations`, "allocations", {
+      clusters: [{ id: "todo-create", story_ids: [storyId], total_points: 2, depends_on_clusters: [], shared_seams: ["src/todo.js"], required_skills: ["JavaScript"], rationale: "One cohesive vertical slice." }],
+    }, [storyId, `${changeId}-deps`]));
     const g1 = proposalAndApprove(root, changeId, "G1", approver);
 
     // --- G2 ---
@@ -436,8 +476,9 @@ function runLivedCanary(options = {}) {
     const g3 = proposalAndApprove(root, changeId, "G3", approver);
 
     // --- G4 ---
-    register(root, baseArtifact(changeId, sourceId, `${changeId}-contract`, "plans", {
+    const contract = {
       story_id: storyId,
+      feature_surfaces: ["internal"],
       source_requirements: ["createTodo returns id, title, done=false", "empty title rejected"],
       approved_design_refs: [`${changeId}-design`, `${changeId}-architecture`],
       dependency_story_ids: [],
@@ -454,7 +495,11 @@ function runLivedCanary(options = {}) {
       human_decisions: [],
       implementation_posture: "first-slice",
       reuse_targets: [],
-    }, [storyId, `${changeId}-design`, `${changeId}-case`]));
+    };
+    register(root, baseArtifact(changeId, sourceId, `${changeId}-contract`, "plans", contract, [storyId, `${changeId}-design`, `${changeId}-case`]));
+    register(root, baseArtifact(changeId, sourceId, `${changeId}-traceability`, "traceability", {
+      links: traceLinks(contract, "requirements/prd.md#acceptance"),
+    }, [`${changeId}-contract`, `${changeId}-case`]));
     const g4 = proposalAndApprove(root, changeId, "G4", approver);
 
     git(root, ["add", "."]);
@@ -535,6 +580,8 @@ function runLivedCanary(options = {}) {
     const sensorPath = writeJson(root, ".claude/specs/evidence/lived-sensors.json", {
       generated_at: new Date(Date.now() + 2000).toISOString(),
       status: "pass",
+      blocking_status: "pass",
+      workspace: workspaceFingerprint(root),
       sensors: [{
         sensor_id: "unit",
         status: "pass",
@@ -739,6 +786,8 @@ function runStoryRatchet({
   const sensorPath = writeJson(root, `.claude/specs/evidence/${evidencePrefix}-sensors.json`, {
     generated_at: new Date(Date.now() + 2000).toISOString(),
     status: "pass",
+    blocking_status: "pass",
+    workspace: workspaceFingerprint(root),
     sensors: [{
       sensor_id: "unit",
       status: "pass",
@@ -831,6 +880,7 @@ function runMultiStoryEvolutionCanary(options = {}) {
       summary: "createTodo then batch that reuses it",
       outcomes: ["createTodo", "createTodosFromTitles reuses createTodo"],
     }));
+    registerSpdd(root, changeId, sourceId);
     proposalAndApprove(root, changeId, "G0", approver);
 
     register(root, baseArtifact(changeId, sourceId, `${changeId}-epic`, "epics", {
@@ -838,6 +888,8 @@ function runMultiStoryEvolutionCanary(options = {}) {
     }));
     register(root, baseArtifact(changeId, sourceId, story1, "stories", {
       title: "Create a single todo",
+      size: "low", story_points: 2, estimate_confidence: "high",
+      estimate_basis: ["Focused factory plus validation tests."],
       acceptance_criteria: [
         "createTodo(title) returns { id, title, done: false }",
         "createTodo(\"\") throws",
@@ -845,18 +897,20 @@ function runMultiStoryEvolutionCanary(options = {}) {
     }, [`${changeId}-epic`]));
     register(root, baseArtifact(changeId, sourceId, story2, "stories", {
       title: "Batch create reuses createTodo",
+      size: "low", story_points: 3, estimate_confidence: "high",
+      estimate_basis: ["One reuse seam plus batch acceptance tests."],
       acceptance_criteria: [
         "createTodosFromTitles maps each title through createTodo",
         "Empty titles in the batch still throw",
       ],
     }, [`${changeId}-epic`]));
     register(root, baseArtifact(changeId, sourceId, `${changeId}-deps`, "dependencies", {
-      dag: [
-        { story_id: story1, depends_on: [] },
-        { story_id: story2, depends_on: [story1] },
-      ],
-      sequence: [story1, story2],
+      nodes: [{ story_id: story1 }, { story_id: story2 }],
+      edges: [{ from: story1, to: story2, rationale: "Batch reuses the single-create seam." }],
     }, [story1, story2]));
+    register(root, baseArtifact(changeId, sourceId, `${changeId}-allocations`, "allocations", {
+      clusters: [{ id: "todo-evolution", story_ids: [story1, story2], total_points: 5, depends_on_clusters: [], shared_seams: ["src/todo.js"], required_skills: ["JavaScript"], rationale: "Keep sequential reuse work with one owner." }],
+    }, [story1, story2, `${changeId}-deps`]));
     proposalAndApprove(root, changeId, "G1", approver);
 
     register(root, baseArtifact(changeId, sourceId, `${changeId}-data`, "test-data", {
@@ -896,6 +950,7 @@ function runMultiStoryEvolutionCanary(options = {}) {
 
     const story1Contract = {
       story_id: story1,
+      feature_surfaces: ["internal"],
       source_requirements: ["createTodo returns id, title, done=false", "empty title rejected"],
       approved_design_refs: [`${changeId}-design`, `${changeId}-architecture`],
       dependency_story_ids: [],
@@ -921,6 +976,7 @@ function runMultiStoryEvolutionCanary(options = {}) {
     // Negative path: dependent story claims first-slice → G4 blocked.
     register(root, baseArtifact(changeId, sourceId, `${changeId}-contract-2`, "plans", {
       story_id: story2,
+      feature_surfaces: ["internal"],
       source_requirements: ["batch reuses createTodo"],
       approved_design_refs: [`${changeId}-design`, `${changeId}-architecture`],
       dependency_story_ids: [story1],
@@ -935,6 +991,10 @@ function runMultiStoryEvolutionCanary(options = {}) {
       implementation_posture: "first-slice",
       reuse_targets: [],
     }, [story2, story1, `${changeId}-design`, `${changeId}-case-2`]));
+    const badStory2Contract = JSON.parse(fs.readFileSync(path.join(root, ".claude", "specs", "plans", `${changeId}-contract-2.json`), "utf8")).content;
+    register(root, baseArtifact(changeId, sourceId, `${changeId}-traceability`, "traceability", {
+      links: [...traceLinks(story1Contract, "requirements/prd.md#outcome"), ...traceLinks(badStory2Contract, "requirements/prd.md#outcome")],
+    }, [`${changeId}-contract-1`, `${changeId}-contract-2`]));
 
     const badG4 = specs.proposalPack(root, { changeId, gate: "G4", write: true });
     if (badG4.ready) {
@@ -956,8 +1016,9 @@ function runMultiStoryEvolutionCanary(options = {}) {
     }
 
     // Positive path: story-2 reuses createTodo.
-    register(root, baseArtifact(changeId, sourceId, `${changeId}-contract-2`, "plans", {
+    const story2Contract = {
       story_id: story2,
+      feature_surfaces: ["internal"],
       source_requirements: ["batch reuses createTodo", "empty titles still throw"],
       approved_design_refs: [`${changeId}-design`, `${changeId}-architecture`],
       dependency_story_ids: [story1],
@@ -974,7 +1035,11 @@ function runMultiStoryEvolutionCanary(options = {}) {
       human_decisions: [],
       implementation_posture: "reuse-existing",
       reuse_targets: [{ path: "src/todo.js", symbol: "createTodo" }],
-    }, [story2, story1, `${changeId}-design`, `${changeId}-case-2`]));
+    };
+    register(root, baseArtifact(changeId, sourceId, `${changeId}-contract-2`, "plans", story2Contract, [story2, story1, `${changeId}-design`, `${changeId}-case-2`]));
+    register(root, baseArtifact(changeId, sourceId, `${changeId}-traceability`, "traceability", {
+      links: [...traceLinks(story1Contract, "requirements/prd.md#outcome"), ...traceLinks(story2Contract, "requirements/prd.md#outcome")],
+    }, [`${changeId}-contract-1`, `${changeId}-contract-2`]));
 
     const g4 = proposalAndApprove(root, changeId, "G4", approver);
     git(root, ["add", "."]);

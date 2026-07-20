@@ -125,6 +125,17 @@ function validateHarnessConfig(root) {
   }
 
   try {
+    require("./dependency-sensors").loadDependencyConfig(root);
+    require("./regression-sensors").loadRegressionConfig(root);
+    require("./modularity-review").loadModularityConfig(root);
+    require("./modularity-review").loadDecisions(root);
+    require("./sensor-operations").loadOperationsPolicy(root);
+    require("./sensor-quarantine").loadQuarantines(root);
+  } catch (error) {
+    errors.push(error.message);
+  }
+
+  try {
     const { waivers } = loadWaivers(root);
     for (const error of validateWaivers(waivers)) errors.push(`Sensor waivers: ${error}`);
   } catch (error) {

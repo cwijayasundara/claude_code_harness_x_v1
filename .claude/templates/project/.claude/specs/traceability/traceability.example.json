@@ -1,0 +1,28 @@
+{
+  "id": "CHANGE-001-traceability",
+  "package": "traceability",
+  "change_id": "CHANGE-001",
+  "source_ids": ["CHANGE-001-source"],
+  "source_locations": ["requirements/change-prd.md#requirement-1"],
+  "derived_from": ["CHANGE-001-story-001-contract", "CHANGE-001-test-case-001"],
+  "status": "draft",
+  "assumptions": [],
+  "open_questions": [],
+  "human_approver": null,
+  "approved_at": null,
+  "content": {
+    "links": [
+      {
+        "requirement_id": "REQ-001",
+        "source_location": "requirements/change-prd.md#requirement-1",
+        "story_id": "CHANGE-001-story-001",
+        "acceptance_criterion_id": "AC-001",
+        "test_case_id": "CHANGE-001-test-case-001",
+        "level": "integration",
+        "disposition": "planned-automated",
+        "verification_check_id": "integration-suite",
+        "risk_tags": ["public-contract"]
+      }
+    ]
+  }
+}

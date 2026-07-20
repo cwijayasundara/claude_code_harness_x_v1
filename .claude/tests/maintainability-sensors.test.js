@@ -6,6 +6,7 @@ const test = require("node:test");
 const {
   checkFileSizes,
   checkFunctionSizes,
+  checkCodeComplexity,
   checkExceptionHandling,
   checkLoggingDiscipline,
   checkPerformanceHeuristics,
@@ -86,6 +87,25 @@ test("near-duplication detects copied blocks across files", () => {
   assert.ok(result.affectedPaths.includes("src/b.js"));
 });
 
+test("near-duplication compares changed code with unchanged repository code", () => {
+  const root = tempProject();
+  fs.writeFileSync(path.join(root, ".claude", "project", "maintainability.json"), JSON.stringify({
+    version: 1,
+    duplication: { min_block_lines: 6, min_occurrences: 2, severity: "warn", extensions: [".js"], ignore_path_parts: ["node_modules"] },
+  }));
+  const block = [
+    "function normalize(value) {", "  const text = String(value);", "  const trimmed = text.trim();",
+    "  if (!trimmed) throw new Error('empty');", "  const lowered = trimmed.toLowerCase();",
+    "  return lowered.replace(/\\s+/g, '-');", "}",
+  ].join("\n");
+  fs.writeFileSync(path.join(root, "src", "canonical.js"), `${block}\n`);
+  fs.writeFileSync(path.join(root, "src", "changed.js"), `${block}\n`);
+  const result = checkNearDuplication(root, ["src/changed.js"]);
+  assert.equal(result.status, "warn");
+  assert.ok(result.affectedPaths.includes("src/canonical.js"));
+  assert.ok(result.affectedPaths.includes("src/changed.js"));
+});
+
 test("loadMaintainabilityConfig uses defaults when file missing", () => {
   const root = tempProject();
   const loaded = loadMaintainabilityConfig(root);
@@ -114,6 +134,21 @@ test("function-size fails when a function exceeds max_lines", () => {
   const result = checkFunctionSizes(root, ["src/fn.js"]);
   assert.equal(result.status, "fail");
   assert.match(result.reason, /big/);
+});
+
+test("code-complexity reports excessive arguments and branching", () => {
+  const root = tempProject();
+  fs.writeFileSync(path.join(root, ".claude", "project", "maintainability.json"), JSON.stringify({
+    version: 1,
+    code_complexity: { max_arguments: 3, warn_arguments: 2, max_cyclomatic: 3, warn_cyclomatic: 2, severity: "fail", extensions: [".js"] },
+  }));
+  fs.writeFileSync(path.join(root, "src", "complex.js"), [
+    "function decide(a, b, c, d) {", "  if (a) return b;", "  if (c && d) return c;", "  return d;", "}", "",
+  ].join("\n"));
+  const result = checkCodeComplexity(root, ["src/complex.js"]);
+  assert.equal(result.status, "fail");
+  assert.match(result.reason, /arguments/);
+  assert.match(result.reason, /cyclomatic/);
 });
 
 test("exception-handling fails on empty catch", () => {
@@ -154,6 +189,7 @@ test("runAllMaintainabilitySensors returns the full craft suite", () => {
   assert.deepEqual(ids, [
     "file-size",
     "function-size",
+    "code-complexity",
     "exception-handling",
     "logging-discipline",
     "performance-heuristics",

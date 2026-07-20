@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "enabled": true,
+  "minimum_independent_reviews": 2,
+  "triggers": {
+    "changed_files": 12,
+    "changed_source_files": 8,
+    "new_dependency_edges": 5,
+    "high_impact_modules": 1,
+    "dependency_cycles": 1,
+    "verified_stories_since_review": 4
+  },
+  "include_paths": [
+    ".claude/project/architecture.md",
+    ".claude/project/boundaries.json",
+    ".claude/project/dependency-sensors.json"
+  ]
+}

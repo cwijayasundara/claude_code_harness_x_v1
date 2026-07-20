@@ -33,6 +33,27 @@ function project(failingKind = null) {
   return root;
 }
 
+function finalizationIndex(root, changeId, storyId) {
+  fs.mkdirSync(path.join(root, ".claude", "specs", "traceability"), { recursive: true });
+  const traceId = `${changeId}-traceability`;
+  const tracePath = `.claude/specs/traceability/${traceId}.json`;
+  fs.writeFileSync(path.join(root, tracePath), JSON.stringify({
+    id: traceId, package: "traceability", change_id: changeId, status: "approved",
+    content: { links: [{
+      requirement_id: "REQ-1", source_location: "requirements.md", story_id: storyId,
+      acceptance_criterion_id: "AC-1", test_case_id: "TC-1", level: "unit",
+      disposition: "planned-automated", verification_check_id: "unit", risk_tags: [],
+    }] },
+  }));
+  return {
+    changes: { [changeId]: { source_ids: [`${changeId}-source`] } },
+    artifacts: [
+      { id: storyId, change_id: changeId, package: "stories", status: "approved" },
+      { id: traceId, change_id: changeId, package: "traceability", status: "approved", path: tracePath },
+    ],
+  };
+}
+
 test("runs the complete pre-PR contract and writes normalized evidence", () => {
   const root = project();
   const { report, reportPath } = verifyBranch(root, { changeId: "C-1", cadence: "pre-pr" });
@@ -74,16 +95,48 @@ test("agent_summary lists corrections for failing checks", () => {
   assert.ok(report.agent_summary.corrections[0].next_action);
 });
 
+test("pre-pr executes a configured browser E2E journey", () => {
+  const root = project();
+  const planPath = path.join(root, ".claude", "verification.json");
+  const plan = JSON.parse(fs.readFileSync(planPath, "utf8"));
+  plan.checks.push({
+    id: "browser-journeys", label: "Playwright journeys", cadence: "pre-pr", kind: "browser-e2e", configured: true,
+    command: process.execPath, args: ["-e", "process.exit(0)"], timeout_ms: 5000,
+    hermetic: true, boundary_ids: ["llm"], public_seam: "web UI", safe_local_config: "local API and stubbed LLM",
+    journeys: [{ id: "happy", type: "success" }, { id: "invalid", type: "failure" }],
+  });
+  fs.writeFileSync(planPath, JSON.stringify(plan));
+  const { report } = verifyBranch(root, { changeId: "C-browser", cadence: "pre-pr" });
+  assert.equal(report.checks.find((check) => check.kind === "browser-e2e").status, "pass");
+});
+
 test("finalizes only after every approved story and independent branch review pass", () => {
   const root = project();
   const { reportPath } = verifyBranch(root, { changeId: "C-3", cadence: "pre-pr" });
   fs.mkdirSync(path.join(root, ".claude", "state", "stories"), { recursive: true });
   fs.mkdirSync(path.join(root, ".claude", "specs", "reviews"), { recursive: true });
   fs.writeFileSync(path.join(root, ".claude", "state", "stories", "C-3-story.json"), JSON.stringify({ story_id: "C-3-story", state: "STORY_VERIFIED" }));
-  fs.writeFileSync(path.join(root, ".claude", "specs", "index.json"), JSON.stringify({ changes: { "C-3": { source_ids: ["C-3-source"] } }, artifacts: [{ id: "C-3-story", change_id: "C-3", package: "stories", status: "approved" }] }));
+  fs.writeFileSync(path.join(root, ".claude", "specs", "index.json"), JSON.stringify(finalizationIndex(root, "C-3", "C-3-story")));
   const reviewPath = path.join(root, ".claude", "specs", "reviews", "C-3-branch.json");
   fs.writeFileSync(reviewPath, JSON.stringify({ verdict: "pass", blocking_findings: [], required_human_decisions: [], non_blocking_findings: [] }));
   const { evidence } = finalizeBranch(root, { changeId: "C-3", reportFile: path.relative(root, reportPath), reviewFile: path.relative(root, reviewPath) });
   assert.equal(evidence.status, "ready-for-draft-pr");
   assert.deepEqual(evidence.story_ids, ["C-3-story"]);
+  assert.equal(evidence.traceability.status, "pass");
+});
+
+test("risk-triggered branch finalization requires fresh merged modularity evidence", () => {
+  const root = project();
+  fs.mkdirSync(path.join(root, ".claude", "project"), { recursive: true });
+  fs.writeFileSync(path.join(root, ".claude", "project", "dependency-sensors.json"), JSON.stringify({ version: 1, approved_roots: ["."] }));
+  fs.writeFileSync(path.join(root, ".claude", "project", "modularity-review.json"), JSON.stringify({ version: 1, enabled: true, minimum_independent_reviews: 2, triggers: { changed_source_files: 1, changed_files: 99, new_dependency_edges: 99, high_impact_modules: 99, dependency_cycles: 99, verified_stories_since_review: 99 }, include_paths: [] }));
+  fs.writeFileSync(path.join(root, "app.js"), "module.exports = 2;\n");
+  const { reportPath } = verifyBranch(root, { changeId: "C-mod", cadence: "pre-pr" });
+  fs.mkdirSync(path.join(root, ".claude", "state", "stories"), { recursive: true });
+  fs.mkdirSync(path.join(root, ".claude", "specs", "reviews"), { recursive: true });
+  fs.writeFileSync(path.join(root, ".claude", "state", "stories", "C-mod-story.json"), JSON.stringify({ story_id: "C-mod-story", state: "STORY_VERIFIED", updated_at: new Date().toISOString() }));
+  fs.writeFileSync(path.join(root, ".claude", "specs", "index.json"), JSON.stringify(finalizationIndex(root, "C-mod", "C-mod-story")));
+  const reviewPath = path.join(root, ".claude", "specs", "reviews", "C-mod-branch.json");
+  fs.writeFileSync(reviewPath, JSON.stringify({ verdict: "pass", blocking_findings: [], required_human_decisions: [], non_blocking_findings: [] }));
+  assert.throws(() => finalizeBranch(root, { changeId: "C-mod", reportFile: path.relative(root, reportPath), reviewFile: path.relative(root, reviewPath) }), /require a merged independent modularity review/i);
 });

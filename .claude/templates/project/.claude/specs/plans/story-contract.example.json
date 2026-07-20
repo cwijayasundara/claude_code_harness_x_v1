@@ -12,6 +12,10 @@
   "approved_at": null,
   "content": {
     "story_id": "CHANGE-001-story-001",
+    "feature_surfaces": ["api"],
+    "browser_e2e_required": false,
+    "browser_e2e_tool": null,
+    "browser_e2e_equivalent": null,
     "source_requirements": ["REQ-001"],
     "approved_design_refs": ["CHANGE-001-design"],
     "dependency_story_ids": [],

@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "sensor_timeout_ms": 120000,
+  "max_feedback_seconds": 180,
+  "freshness_minutes": {
+    "completion": 30,
+    "pre_pr": 20,
+    "ci": 20
+  },
+  "watch_heartbeat_seconds": 60,
+  "bad_code_canary_max_age_hours": 168,
+  "flakiness": {
+    "window_runs": 20,
+    "minimum_samples": 6,
+    "maximum_transition_rate": 0.4
+  },
+  "retention": {
+    "maximum_history_entries": 10000,
+    "minimum_days": 30
+  },
+  "attestation": {
+    "required_in_ci": false,
+    "public_key_path": null
+  },
+  "production_slos": {
+    "maximum_false_green_rate": 0.01,
+    "minimum_sensor_availability": 0.99
+  }
+}

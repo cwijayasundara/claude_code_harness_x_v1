@@ -15,6 +15,8 @@ const DEFAULT_POLICY = Object.freeze({
     minimum_sensor_correction_rate: 0.9,
     maximum_mean_provider_cost_per_accepted_story_usd: 5,
     minimum_brownfield_graph_useful_rate: 0.6,
+    minimum_modularity_review_precision: 0.7,
+    minimum_modularity_review_value_rate: 0.5,
   },
 });
 
@@ -62,10 +64,13 @@ function normalizeRecord(root, input) {
   if (!["accepted", "rejected"].includes(record.outcome)) throw new Error("Pilot outcome must be accepted or rejected.");
   if (typeof record.first_pass_accepted !== "boolean") throw new Error("Pilot first_pass_accepted must be boolean.");
   for (const field of ["story_count", "escaped_defects", "observation_days", "sensor_findings", "sensor_true_positives", "sensor_findings_corrected"]) finite(record, field, { integer: true });
-  for (const field of ["human_review_minutes", "provider_cost_usd"]) finite(record, field);
+  for (const field of ["modularity_reviews", "modularity_findings", "modularity_true_positives", "modularity_useful_reviews"]) finite(record, field, { integer: true });
+  for (const field of ["human_review_minutes", "provider_cost_usd", "modularity_review_minutes"]) finite(record, field);
   if (record.story_count < 1) throw new Error("Pilot story_count must be at least one.");
   if (record.sensor_true_positives > record.sensor_findings) throw new Error("Pilot sensor_true_positives cannot exceed sensor_findings.");
   if (record.sensor_findings_corrected > record.sensor_true_positives) throw new Error("Pilot sensor_findings_corrected cannot exceed sensor_true_positives.");
+  if (record.modularity_true_positives > record.modularity_findings) throw new Error("Pilot modularity_true_positives cannot exceed modularity_findings.");
+  if (record.modularity_useful_reviews > record.modularity_reviews) throw new Error("Pilot modularity_useful_reviews cannot exceed modularity_reviews.");
   if (record.scenario_type === "brownfield") {
     for (const field of ["graph_queries", "graph_useful_results"]) finite(record, field, { integer: true });
     if (record.graph_queries < 1 || record.graph_useful_results > record.graph_queries) throw new Error("Brownfield pilots require graph queries and useful results no greater than queries.");
@@ -136,6 +141,8 @@ function evaluatePilots(root) {
   const findings = pilots.reduce((sum, record) => sum + record.sensor_findings, 0);
   const truePositives = pilots.reduce((sum, record) => sum + record.sensor_true_positives, 0);
   const brownfield = pilots.filter((record) => record.scenario_type === "brownfield");
+  const modularityFindings = pilots.reduce((sum, record) => sum + record.modularity_findings, 0);
+  const modularityReviews = pilots.reduce((sum, record) => sum + record.modularity_reviews, 0);
   const metrics = {
     pilot_counts: Object.fromEntries(["greenfield", "brownfield"].map((type) => [type, pilots.filter((record) => record.scenario_type === type).length])),
     first_pass_acceptance_rate: ratio(pilots.filter((record) => record.first_pass_accepted).length, pilots.length),
@@ -145,6 +152,9 @@ function evaluatePilots(root) {
     sensor_correction_rate: ratio(pilots.reduce((sum, record) => sum + record.sensor_findings_corrected, 0), truePositives),
     mean_provider_cost_per_accepted_story_usd: ratio(accepted.reduce((sum, record) => sum + record.provider_cost_usd, 0), acceptedStories),
     brownfield_graph_useful_rate: ratio(brownfield.reduce((sum, record) => sum + record.graph_useful_results, 0), brownfield.reduce((sum, record) => sum + record.graph_queries, 0)),
+    modularity_review_precision: ratio(pilots.reduce((sum, record) => sum + record.modularity_true_positives, 0), modularityFindings),
+    modularity_review_value_rate: ratio(pilots.reduce((sum, record) => sum + record.modularity_useful_reviews, 0), modularityReviews),
+    mean_modularity_review_minutes: ratio(pilots.reduce((sum, record) => sum + record.modularity_review_minutes, 0), modularityReviews),
   };
   const checks = [
     ...["greenfield", "brownfield"].map((type) => ({ id: `minimum_${type}_pilots`, pass: metrics.pilot_counts[type] >= policy.minimum_pilots[type], actual: metrics.pilot_counts[type], required: policy.minimum_pilots[type] })),
@@ -156,6 +166,8 @@ function evaluatePilots(root) {
     { id: "sensor_correction", pass: metrics.sensor_correction_rate !== null && metrics.sensor_correction_rate >= policy.thresholds.minimum_sensor_correction_rate, actual: metrics.sensor_correction_rate, required: policy.thresholds.minimum_sensor_correction_rate },
     { id: "provider_cost", pass: metrics.mean_provider_cost_per_accepted_story_usd !== null && metrics.mean_provider_cost_per_accepted_story_usd <= policy.thresholds.maximum_mean_provider_cost_per_accepted_story_usd, actual: metrics.mean_provider_cost_per_accepted_story_usd, required: policy.thresholds.maximum_mean_provider_cost_per_accepted_story_usd },
     { id: "graph_value", pass: metrics.brownfield_graph_useful_rate !== null && metrics.brownfield_graph_useful_rate >= policy.thresholds.minimum_brownfield_graph_useful_rate, actual: metrics.brownfield_graph_useful_rate, required: policy.thresholds.minimum_brownfield_graph_useful_rate },
+    { id: "modularity_review_precision", pass: metrics.modularity_review_precision !== null && metrics.modularity_review_precision >= policy.thresholds.minimum_modularity_review_precision, actual: metrics.modularity_review_precision, required: policy.thresholds.minimum_modularity_review_precision },
+    { id: "modularity_review_value", pass: metrics.modularity_review_value_rate !== null && metrics.modularity_review_value_rate >= policy.thresholds.minimum_modularity_review_value_rate, actual: metrics.modularity_review_value_rate, required: policy.thresholds.minimum_modularity_review_value_rate },
   ];
   const countChecksPass = checks.filter((check) => check.id.startsWith("minimum_") || check.id === "observation_window").every((check) => check.pass);
   const status = !countChecksPass ? "insufficient-evidence" : checks.every((check) => check.pass) ? "eligible-for-human-rollout-decision" : "hold";

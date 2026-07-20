@@ -11,6 +11,12 @@ sensors:
     args: ["run", "lint"]
     extensions: [".ts", ".tsx", ".js", ".jsx"]
     require_script: lint
+  - id: frontend-architecture
+    label: Frontend dependency architecture
+    command: npm
+    args: ["run", "architecture"]
+    extensions: [".ts", ".tsx", ".js", ".jsx"]
+    require_script: architecture
   - id: frontend-tests
     label: Frontend tests
     command: npm

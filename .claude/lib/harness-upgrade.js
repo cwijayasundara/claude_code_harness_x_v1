@@ -16,10 +16,13 @@ const MANIFEST_REL = ".claude/harness-manifest.json";
 const MAINTAINABILITY_CONTROL_IDS = Object.freeze([
   "file-size",
   "function-size",
+  "code-complexity",
   "exception-handling",
   "logging-discipline",
   "performance-heuristics",
   "near-duplication",
+  "dependency-cycles",
+  "coupling-impact",
 ]);
 
 function readJson(file) {
@@ -120,6 +123,12 @@ function planUpgrade(targetRoot, pluginRoot) {
     ".claude/harness-install.json",
     ".claude/project/boundaries.json",
     MAINTAINABILITY_REL,
+    ".claude/project/dependency-sensors.json",
+    ".claude/project/regression-sensors.json",
+    ".claude/project/modularity-review.json",
+    ".claude/project/modularity-decisions.json",
+    ".claude/project/sensor-operations.json",
+    ".claude/sensor-quarantines.json",
     ".claude/project/large-codebase.md",
     ".claude/settings.json",
     ".claude/scripts/harness-cost-statusline.js",

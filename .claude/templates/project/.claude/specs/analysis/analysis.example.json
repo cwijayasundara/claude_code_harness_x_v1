@@ -1,0 +1,19 @@
+{
+  "id": "CHANGE-001-analysis",
+  "package": "analysis",
+  "change_id": "CHANGE-001",
+  "source_ids": ["CHANGE-001-source"],
+  "source_locations": ["requirements/change-prd.md"],
+  "derived_from": ["CHANGE-001-prd"],
+  "status": "draft",
+  "assumptions": [],
+  "open_questions": [],
+  "human_approver": null,
+  "approved_at": null,
+  "content": {
+    "domain_concepts": ["Name the existing and new business concepts"],
+    "strategic_direction": ["Describe the source-grounded solution direction"],
+    "risks": ["Identify business and technical risks"],
+    "requirement_gaps": ["List gaps or explicitly state that none were found"]
+  }
+}

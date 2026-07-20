@@ -14,6 +14,16 @@
     "extensions": [".py", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".go", ".rs", ".java", ".kt"],
     "ignore_path_parts": ["node_modules", ".git", "dist", "build", ".venv", "venv", "vendor", "generated"]
   },
+  "code_complexity": {
+    "max_arguments": 5,
+    "warn_arguments": 4,
+    "max_cyclomatic": 12,
+    "warn_cyclomatic": 9,
+    "severity": "warn",
+    "max_findings": 30,
+    "extensions": [".py", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".go", ".rs", ".java", ".kt"],
+    "ignore_path_parts": ["node_modules", ".git", "dist", "build", ".venv", "venv", "vendor", "generated"]
+  },
   "exception_handling": {
     "severity": "fail",
     "max_findings": 30,

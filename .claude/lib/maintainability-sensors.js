@@ -28,6 +28,16 @@ const DEFAULTS = Object.freeze({
     extensions: DEFAULT_EXTENSIONS,
     ignore_path_parts: DEFAULT_IGNORE,
   },
+  code_complexity: {
+    max_arguments: 5,
+    warn_arguments: 4,
+    max_cyclomatic: 12,
+    warn_cyclomatic: 9,
+    severity: "warn",
+    max_findings: 30,
+    extensions: DEFAULT_EXTENSIONS,
+    ignore_path_parts: DEFAULT_IGNORE,
+  },
   exception_handling: {
     severity: "fail",
     max_findings: 30,
@@ -70,6 +80,7 @@ function loadMaintainabilityConfig(root) {
       version: 1,
       file_size: { ...DEFAULTS.file_size, ...(parsed.file_size || {}) },
       function_size: { ...DEFAULTS.function_size, ...(parsed.function_size || {}) },
+      code_complexity: { ...DEFAULTS.code_complexity, ...(parsed.code_complexity || {}) },
       exception_handling: { ...DEFAULTS.exception_handling, ...(parsed.exception_handling || {}) },
       logging: { ...DEFAULTS.logging, ...(parsed.logging || {}) },
       performance: { ...DEFAULTS.performance, ...(parsed.performance || {}) },
@@ -347,6 +358,66 @@ function checkFunctionSizes(root, changedPaths, options = {}) {
   });
 }
 
+function functionArguments(startLine) {
+  const open = startLine.indexOf("(");
+  const close = startLine.lastIndexOf(")");
+  if (open < 0 || close <= open) return [];
+  const raw = startLine.slice(open + 1, close).trim();
+  if (!raw) return [];
+  return raw.split(",").map((item) => item.trim()).filter(Boolean);
+}
+
+function cyclomaticComplexity(lines) {
+  let complexity = 1;
+  for (const line of lines) {
+    const code = normalizeCodeLine(line);
+    complexity += (code.match(/\b(if|elif|else if|for|while|case|catch|except)\b/g) || []).length;
+    complexity += (code.match(/&&|\|\||\?[^?:]/g) || []).length;
+  }
+  return complexity;
+}
+
+function checkCodeComplexity(root, changedPaths, options = {}) {
+  const { config } = options.config ? { config: options.config } : loadMaintainabilityConfig(root);
+  const settings = config.code_complexity;
+  const paths = inspectPaths(root, changedPaths, settings);
+  const findings = [];
+  const limitLevel = settings.severity === "fail" ? "fail" : "warn";
+  for (const relative of paths) {
+    let text;
+    try { text = fs.readFileSync(path.join(path.resolve(root), relative), "utf8"); } catch { continue; }
+    const lines = text.split(/\r?\n/);
+    for (const fn of extractFunctions(text, relative)) {
+      const args = functionArguments(lines[fn.start - 1] || "");
+      const complexity = cyclomaticComplexity(lines.slice(fn.start - 1, fn.end));
+      if (args.length > settings.max_arguments) {
+        findings.push({ path: relative, level: limitLevel, line: fn.start, name: fn.name, metric: "arguments", value: args.length,
+          message: `${relative}:${fn.start} function '${fn.name}' has ${args.length} arguments (max ${settings.max_arguments}).` });
+      } else if (args.length > settings.warn_arguments) {
+        findings.push({ path: relative, level: "warn", line: fn.start, name: fn.name, metric: "arguments", value: args.length,
+          message: `${relative}:${fn.start} function '${fn.name}' has ${args.length} arguments (warn at ${settings.warn_arguments}).` });
+      }
+      if (complexity > settings.max_cyclomatic) {
+        findings.push({ path: relative, level: limitLevel, line: fn.start, name: fn.name, metric: "cyclomatic", value: complexity,
+          message: `${relative}:${fn.start} function '${fn.name}' has estimated cyclomatic complexity ${complexity} (max ${settings.max_cyclomatic}).` });
+      } else if (complexity > settings.warn_cyclomatic) {
+        findings.push({ path: relative, level: "warn", line: fn.start, name: fn.name, metric: "cyclomatic", value: complexity,
+          message: `${relative}:${fn.start} function '${fn.name}' has estimated cyclomatic complexity ${complexity} (warn at ${settings.warn_cyclomatic}).` });
+      }
+      if (findings.length >= settings.max_findings) break;
+    }
+    if (findings.length >= settings.max_findings) break;
+  }
+  return summarizeFindings(findings, paths, {
+    failLabel: "Code complexity limits exceeded",
+    warnLabel: "Code complexity risk",
+    passEmpty: "No source files in scope for code-complexity sensor.",
+    passOk: (n) => `Argument count and estimated cyclomatic complexity are within limits in ${n} file(s).`,
+    nextFail: "Introduce a cohesive parameter object or split decision logic into named units, then rerun sensors.",
+    nextWarn: "Review the function's responsibilities; prefer a parameter object and simpler decision paths before complexity grows.",
+  });
+}
+
 function checkExceptionHandling(root, changedPaths, options = {}) {
   const { config } = options.config ? { config: options.config } : loadMaintainabilityConfig(root);
   const settings = config.exception_handling;
@@ -586,7 +657,9 @@ function significantLines(text) {
 function checkNearDuplication(root, changedPaths, options = {}) {
   const { config } = options.config ? { config: options.config } : loadMaintainabilityConfig(root);
   const settings = config.duplication;
-  const paths = inspectPaths(root, changedPaths, settings);
+  const changed = inspectPaths(root, changedPaths, settings);
+  const paths = inspectPaths(root, ["."], settings);
+  const changedSet = new Set(changed);
 
   /** @type {Map<string, Array<{ path: string, start: number, end: number, preview: string }>>} */
   const fingerprints = new Map();
@@ -621,6 +694,7 @@ function checkNearDuplication(root, changedPaths, options = {}) {
   const minOcc = Math.max(2, Number(settings.min_occurrences) || 2);
   for (const [digest, locations] of fingerprints.entries()) {
     if (locations.length < minOcc) continue;
+    if (!locations.some((item) => changedSet.has(item.path))) continue;
     const distinctPaths = new Set(locations.map((item) => item.path));
     // Prefer cross-file clones; allow same-file if far apart enough already filtered.
     if (distinctPaths.size < 2 && locations.length < minOcc) continue;
@@ -654,10 +728,10 @@ function checkNearDuplication(root, changedPaths, options = {}) {
     return {
       status: "pass",
       findings: [],
-      affectedPaths: paths.length > 0 ? paths : ["."],
+      affectedPaths: changed.length > 0 ? changed : ["."],
       reason: paths.length === 0
         ? "No source files in scope for duplication sensor."
-        : `No near-duplicate blocks (≥${minLines} significant lines, ≥${minOcc} occurrences) in ${paths.length} file(s).`,
+        : `No changed-code clone found against ${paths.length} eligible repository file(s).`,
       nextAction: "No action required.",
     };
   }
@@ -687,6 +761,7 @@ function runAllMaintainabilitySensors(root, changedPaths, options = {}) {
   return [
     { sensorId: "file-size", label: "File size", result: checkFileSizes(root, changedPaths, opts) },
     { sensorId: "function-size", label: "Function size", result: checkFunctionSizes(root, changedPaths, opts) },
+    { sensorId: "code-complexity", label: "Code complexity", result: checkCodeComplexity(root, changedPaths, opts) },
     { sensorId: "exception-handling", label: "Exception handling", result: checkExceptionHandling(root, changedPaths, opts) },
     { sensorId: "logging-discipline", label: "Logging discipline", result: checkLoggingDiscipline(root, changedPaths, opts) },
     { sensorId: "performance-heuristics", label: "Performance heuristics", result: checkPerformanceHeuristics(root, changedPaths, opts) },
@@ -699,6 +774,7 @@ module.exports = {
   loadMaintainabilityConfig,
   checkFileSizes,
   checkFunctionSizes,
+  checkCodeComplexity,
   checkExceptionHandling,
   checkLoggingDiscipline,
   checkPerformanceHeuristics,

@@ -7,6 +7,26 @@ hooks:
       hooks:
         - type: command
           command: node "$CLAUDE_PLUGIN_ROOT/hooks/pre-tool-safety.js"
+  PostToolUse:
+    - matcher: Edit|Write|NotebookEdit
+      hooks:
+        - type: command
+          command: node "$CLAUDE_PLUGIN_ROOT/hooks/sensor-lifecycle.js" post-tool
+          async: true
+          timeout: 180
+          statusMessage: Scheduling harness sensors
+  Stop:
+    - hooks:
+        - type: command
+          command: node "$CLAUDE_PLUGIN_ROOT/hooks/sensor-lifecycle.js" gate completion
+          timeout: 240
+          statusMessage: Verifying production sensor evidence
+  TaskCompleted:
+    - hooks:
+        - type: command
+          command: node "$CLAUDE_PLUGIN_ROOT/hooks/sensor-lifecycle.js" gate completion
+          timeout: 240
+          statusMessage: Checking task sensor evidence
 ---
 
 # Harness delivery workflow
@@ -18,6 +38,12 @@ $ARGUMENTS
 ```
 
 Use this workflow. Keep artifacts and context proportionate to risk; do not invent a larger process.
+
+Invoking `/harness` activates the production sensor lifecycle for this skill:
+file edits schedule debounced changed-path checks, and Stop/TaskCompleted fail
+closed on missing, stale, workspace-mismatched, or blocking evidence. These
+handlers duplicate the plugin-level safety net intentionally; Claude Code
+deduplicates identical hook commands.
 
 If the request is to initialise, validate, diagnose, migrate, upgrade, audit,
 run sensors/CI, maintain evidence, or otherwise operate the harness rather
@@ -47,7 +73,7 @@ story work. Co-design gates still apply before product claims and draft PRs.
 2. Run `node "$CLAUDE_PLUGIN_ROOT/scripts/harness-validate.js" .` before reading project context. Resolve configuration errors before delivery work.
 3. Invoke `harness-engineering-core` and `harness-context-selection`. Read only the relevant project files they identify.
 4. Confirm Git is on a named feature branch. Never write specifications or product code on `main`, `master`, or `develop`.
-5. For a BRD/PRD inside the project, run `node "$CLAUDE_PLUGIN_ROOT/scripts/harness-specs.js" intake --change <id> --source <path> --kind <brd|prd> --root .`. This captures an immutable source and hash in `.claude/specs/index.json`. Do not treat a conversation summary as a BRD/PRD; ask the human to save or identify the governing source.
+5. For a BRD/PRD inside the project, run `node "$CLAUDE_PLUGIN_ROOT/scripts/harness-specs.js" intake --change <id> --source <path> --kind <brd|prd> --root .`. This captures an immutable source and hash in `.claude/specs/index.json`. Do not treat a conversation summary as a BRD/PRD; ask the human to save or identify the governing source. PRD intake then requires a source-grounded SPDD analysis and a complete REASONS Canvas (`requirements`, `entities`, `approach`, `structure`, `operations`, `norms`, `safeguards`, and sync state) before G0. A directly supplied BRD must declare the reviewed `brd-direct` rationale and sufficiency checks. Use the target examples under `.claude/specs/analysis/`, `.claude/specs/reasons-canvas/`, and `.claude/specs/brd/`.
 6. Put every derived artifact in its matching `.claude/specs/<package>/` as schema-compatible JSON, then register it with `harness-specs.js register --file <path> --root .`. Every artifact must name captured `source_ids`, precise `source_locations`, assumptions, and open questions.
 7. Stop when ambiguity changes observable behaviour, domain meaning, data handling, security, architecture, or test expectations. Never silently promote an inference to a requirement.
 
@@ -71,8 +97,8 @@ that pack.
 
 Gate meanings:
 
-- G0: feature branch, captured source, scope, assumptions, and open questions.
-- G1: epics, stories, acceptance criteria, and dependency ordering.
+- G0: feature branch, captured source, SPDD analysis plus REASONS Canvas for PRD intake (or an explicit sufficient direct-BRD decision), scope, assumptions, and open questions.
+- G1: epics; INVEST-sized stories with acceptance criteria, low/medium/high size, policy-matched points, confidence, and estimate basis; one canonical acyclic dependency DAG; deterministically derived ready set and weighted critical path; and complete non-overlapping engineer allocation clusters. Allocation is proposed for human assignment, never automatic.
 - G2: test data, test cases, integration/system journeys, and test plan.
 - G3: architecture, design, folder structure, seams, risks, and measurable performance budgets.
   Architecture must present three **stack-agnostic** structural alternatives
@@ -86,13 +112,31 @@ Gate meanings:
   human before `approve`. Prefer `--write` so the pack lands under
   `.claude/specs/evidence/*-gate-G3-proposal.md`. Do not ask the human to read
   only raw JSON.
-- G4: story execution order and bounded TDD plan. Each story contract sets
+- G4: story execution order, bounded TDD plan, and a complete requirements-to-test traceability artifact. Every source requirement and acceptance criterion maps to an approved test case plus an automated, manual, or time-bounded approved-exclusion disposition. Each story contract sets
   `implementation_posture` (`first-slice` | `reuse-existing` | `extract-shared` |
   `justified-divergence`) with `reuse_targets` or a divergence justification as
   required. Dependent stories cannot claim `first-slice`.
+  Every contract also declares `feature_surfaces`. A `ui` surface requires
+  `browser_e2e_required=true`, a configured hermetic pre-PR `browser-e2e`
+  check, and a matching browser-level trace link. React/TypeScript defaults to
+  Playwright; an equivalent runner needs an explicit rationale. Non-UI stories
+  do not acquire a browser check.
 
 Use `harness-specs.js approve --change <id> --gate <G0..G4> --approver <human> --root .`
 only after that explicit decision. Gates are sequential. Do not implement before G4.
+
+After approved G1, an optional tracker projection may be exported with
+`harness-specs.js tracker-export`, reviewed, and separately approved with
+`tracker-approve`. Neither action contacts Linear, Jira, or Azure DevOps and
+neither is part of G1 approval. Local specifications stay authoritative. Only a
+project-owned adapter may perform an explicit live publication; keep credentials
+out of artifacts, record its result with `tracker-record`, treat unchanged hashes
+as no-ops, and stop for human reconciliation on remote divergence.
+
+Official tracker MCP connections are opt-in. Configure them with
+`harness-tracker-mcp.js configure`; authenticate interactively through `/mcp`.
+Use `harness-tracker-publish` only when the user explicitly requests the external
+write. MCP availability or projection approval alone is never write authority.
 
 For brownfield work use its own human-approved discovery track before the
 greenfield-style story/design gates:
@@ -210,6 +254,7 @@ model routing only after recorded spend reaches the limit; use
 - The scoped safety hook blocks only clearly destructive Git commands: hard reset, forced clean, `checkout --`, and force-push. It does not replace normal human approval for other operations.
 - Never add a new workflow engine, hook, sensor, or profile control while completing a product change.
 - Approved specifications are immutable. Record a linked amendment or superseding artifact and obtain the affected gate approval again.
+- When approved prompt intent changes, register replacement artifacts plus a `prompt-amendments` artifact, run `harness-specs.js amend`, and stop story work until the reopened G0-G4 gates are explicitly reapproved.
 - Do not add new domain rules without a domain-owner decision.
 - Keep context packs narrow and summaries concise.
 - Escalate after one failed automated repair attempt or when a domain/architecture decision is required.

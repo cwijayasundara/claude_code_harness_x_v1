@@ -1,0 +1,59 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/sensor-lifecycle.js", "post-tool"],
+            "async": true,
+            "timeout": 180,
+            "statusMessage": "Scheduling harness sensors"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/sensor-lifecycle.js", "gate", "completion"],
+            "timeout": 240,
+            "statusMessage": "Verifying production sensor evidence"
+          }
+        ]
+      }
+    ],
+    "TaskCompleted": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/sensor-lifecycle.js", "gate", "completion"],
+            "timeout": 240,
+            "statusMessage": "Checking task sensor evidence"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "^lean-expert-generalist-harness:harness-generator$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/sensor-lifecycle.js", "gate", "completion"],
+            "timeout": 240,
+            "statusMessage": "Checking generated code before subagent completion"
+          }
+        ]
+      }
+    ]
+  }
+}

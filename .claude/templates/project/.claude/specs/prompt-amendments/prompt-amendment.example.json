@@ -1,0 +1,19 @@
+{
+  "id": "CHANGE-001-prompt-amendment-001",
+  "package": "prompt-amendments",
+  "change_id": "CHANGE-001",
+  "source_ids": ["CHANGE-001-source"],
+  "source_locations": ["requirements/change-prd.md#changed-rule"],
+  "derived_from": ["CHANGE-001-reasons"],
+  "status": "draft",
+  "assumptions": [],
+  "open_questions": [],
+  "human_approver": null,
+  "approved_at": null,
+  "content": {
+    "reason": "Describe the corrected business intent and why the approved prompt is no longer sufficient.",
+    "affected_gates": ["G0"],
+    "supersedes_artifact_ids": ["CHANGE-001-reasons"],
+    "replacement_artifact_ids": ["CHANGE-001-reasons-v2"]
+  }
+}

@@ -12,6 +12,14 @@ const { scanSecrets, runGitleaks } = require("../lib/secret-scan");
 const { runAllMaintainabilitySensors } = require("../lib/maintainability-sensors");
 const { loadWaivers, applyWaiver } = require("../lib/sensor-waivers");
 const { redactEvidence } = require("../lib/evidence-hygiene");
+const { loadControlManifest } = require("../lib/control-manifest");
+const { gitChangedPaths, resolveInspectionPaths, workspaceFingerprint } = require("../lib/sensor-scope");
+const { checkCouplingImpact, checkDependencyCycles } = require("../lib/dependency-sensors");
+const { checkCoverage, checkGenerative, checkMutation, checkTestIntegrity } = require("../lib/regression-sensors");
+const { appendSensorHistory, loadOperationsPolicy, readHistory } = require("../lib/sensor-operations");
+const { applyQuarantine, loadQuarantines } = require("../lib/sensor-quarantine");
+
+const runStartedAt = Date.now();
 
 function parseArguments(args) {
   const parsed = { root: ".", changedPaths: [], all: false, failOnWarn: false };
@@ -33,27 +41,6 @@ function parseArguments(args) {
     }
   }
   return parsed;
-}
-
-function gitChangedPaths(root) {
-  const result = spawnSync("git", ["diff", "--name-only", "HEAD"], { cwd: root, encoding: "utf8" });
-  if (result.status !== 0) return [];
-  return result.stdout.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
-}
-
-function projectFiles(root) {
-  const ignored = new Set([".git", ".claude", "node_modules", "dist", "build", ".venv", "venv"]);
-  const files = [];
-  const pending = [root];
-  while (pending.length > 0) {
-    const directory = pending.pop();
-    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
-      const fullPath = path.join(directory, entry.name);
-      if (entry.isDirectory() && !ignored.has(entry.name)) pending.push(fullPath);
-      if (entry.isFile()) files.push(path.relative(root, fullPath));
-    }
-  }
-  return files;
 }
 
 function packageScriptExists(root, name) {
@@ -90,7 +77,7 @@ function writeLog(root, sensorId, output) {
   return path.relative(root, reportPath);
 }
 
-function runSensor(root, sensor, changedPaths) {
+function runSensor(root, sensor, changedPaths, timeoutMs) {
   const command = [sensor.command, ...sensor.args].join(" ");
   if (sensor.require_file && !fs.existsSync(path.join(root, sensor.require_file))) {
     return {
@@ -112,7 +99,7 @@ function runSensor(root, sensor, changedPaths) {
   }
 
   process.stdout.write(`RUN   ${sensor.label}\n`);
-  const execution = spawnSync(sensor.command, sensor.args, { cwd: root, encoding: "utf8", maxBuffer: 1024 * 1024 });
+  const execution = spawnSync(sensor.command, sensor.args, { cwd: root, encoding: "utf8", maxBuffer: 1024 * 1024, timeout: timeoutMs, killSignal: "SIGTERM" });
   const output = `${execution.stdout || ""}${execution.stderr || ""}`;
   const logPath = writeLog(root, sensor.id, output);
   const affectedPaths = diagnosticPaths(output, root, changedPaths);
@@ -123,6 +110,14 @@ function runSensor(root, sensor, changedPaths) {
       reason: `${sensor.label} could not run because ${sensor.command} is unavailable.`,
       nextAction: `Install ${sensor.command} or configure an equivalent project sensor.`,
       evidence: `${logPath}; command unavailable: ${sensor.command}`,
+    };
+  }
+  if (execution.error && execution.error.code === "ETIMEDOUT") {
+    return {
+      status: "fail", affectedPaths,
+      reason: `${sensor.label} exceeded its ${timeoutMs}ms execution budget.`,
+      nextAction: "Diagnose the stalled command or explicitly tune the sensor operations timeout.",
+      evidence: `${logPath}; ${command} timed out`,
     };
   }
   if (execution.status === 0) {
@@ -152,6 +147,8 @@ try {
 }
 
 const root = path.resolve(argumentsParsed.root);
+let operationsPolicy;
+try { operationsPolicy = loadOperationsPolicy(root).policy; } catch (error) { process.stderr.write(`ERROR: ${error.message}\n`); process.exit(2); }
 let config;
 try {
   const validation = validateHarnessConfig(root);
@@ -169,11 +166,32 @@ const changedPaths = [...new Set(argumentsParsed.changedPaths.length > 0
   ? argumentsParsed.changedPaths
   : (argumentsParsed.all ? ["."] : gitChangedPaths(root)))];
 const scopedPaths = changedPaths.length > 0 ? changedPaths : ["."];
-const inspectionPaths = changedPaths.length > 0 ? changedPaths : projectFiles(root);
+const inspectionPaths = resolveInspectionPaths(root, scopedPaths);
 const results = [];
 const { waivers } = loadWaivers(root);
+const { document: quarantines } = loadQuarantines(root);
+const historySamples = new Map();
+for (const entry of readHistory(root)) if (entry.sensor_id) historySamples.set(entry.sensor_id, (historySamples.get(entry.sensor_id) || 0) + 1);
+const { manifest } = loadControlManifest(root);
+const controlPolicies = new Map(manifest.controls.map((control) => [control.id, control.severity]));
+function policyFor(sensorId, fallbackControl) {
+  return controlPolicies.get(sensorId) || controlPolicies.get(fallbackControl) || "blocking";
+}
+function withPolicy(result, fallbackControl) {
+  const waived = applyWaiver(result, waivers);
+  const quarantined = applyQuarantine(waived, quarantines, historySamples.get(result.sensor_id) || 0);
+  const policySeverity = policyFor(result.sensor_id, fallbackControl);
+  return {
+    ...quarantined,
+    policy_severity: policySeverity,
+    disposition: quarantined.waiver_id ? "waived" : quarantined.quarantine_id ? "quarantined" : policySeverity === "blocking" ? "blocking" : "advisory",
+  };
+}
 function record(result) {
-  results.push(applyWaiver(result, waivers));
+  results.push(withPolicy(result));
+}
+function recordProfile(result) {
+  results.push(withPolicy(result, "profile-verification"));
 }
 process.stdout.write(`INFO  Harness sensors: ${root}\n`);
 process.stdout.write(`INFO  Scope: ${changedPaths.length > 0 ? changedPaths.join(", ") : "project-wide (no Git diff detected)"}\n`);
@@ -184,8 +202,8 @@ for (const profileName of config.technologyProfiles) {
     const applicable = argumentsParsed.all || changedPaths.length === 0 || isApplicable(sensor, changedPaths);
     if (!applicable) continue;
     const sensorPaths = changedPaths.length === 0 ? scopedPaths : changedPaths.filter((item) => isApplicable(sensor, [item]));
-    const result = createSensorResult({ sensorId: sensor.id, ...runSensor(root, sensor, sensorPaths.length > 0 ? sensorPaths : scopedPaths) });
-    record(result);
+    const result = createSensorResult({ sensorId: sensor.id, ...runSensor(root, sensor, sensorPaths.length > 0 ? sensorPaths : scopedPaths, operationsPolicy.sensor_timeout_ms) });
+    recordProfile(result);
     process.stdout.write(`${result.status.toUpperCase().padEnd(5)} ${sensor.label}\n`);
   }
 }
@@ -196,8 +214,8 @@ for (const sensor of domainProfile.sensors) {
   const applicable = argumentsParsed.all || changedPaths.length === 0 || isApplicable(sensor, changedPaths);
   if (!applicable) continue;
   const sensorPaths = changedPaths.length === 0 ? scopedPaths : changedPaths.filter((item) => isApplicable(sensor, [item]));
-  const result = createSensorResult({ sensorId: sensor.id, ...runSensor(root, sensor, sensorPaths.length > 0 ? sensorPaths : scopedPaths) });
-  record(result);
+  const result = createSensorResult({ sensorId: sensor.id, ...runSensor(root, sensor, sensorPaths.length > 0 ? sensorPaths : scopedPaths, operationsPolicy.sensor_timeout_ms) });
+  recordProfile(result);
   process.stdout.write(`${result.status.toUpperCase().padEnd(5)} ${sensor.label}\n`);
 }
 
@@ -229,7 +247,13 @@ record(createSensorResult({ sensorId: "secret-scan", ...(secretFindings.length >
 }) }));
 
 const boundaryCheck = checkBoundaries(root, inspectionPaths);
-record(createSensorResult({ sensorId: "architecture-boundaries", ...(boundaryCheck.violations.length > 0 ? {
+record(createSensorResult({ sensorId: "architecture-boundaries", ...(boundaryCheck.rules.length === 0 ? {
+  status: "warn",
+  affectedPaths: [".claude/project/boundaries.json"],
+  reason: "Architecture boundaries are active but no executable rules are configured.",
+  nextAction: "Define the approved module roots and dependency directions before treating architecture verification as complete.",
+  evidence: ".claude/project/boundaries.json (0 rules evaluated)",
+} : boundaryCheck.violations.length > 0 ? {
   status: "fail",
   affectedPaths: boundaryCheck.violations.map((violation) => violation.path),
   reason: `Architecture boundary violations: ${boundaryCheck.violations.map((violation) => `${violation.path} imports ${violation.imported} (${violation.rule.id})`).join(", ")}.`,
@@ -238,9 +262,9 @@ record(createSensorResult({ sensorId: "architecture-boundaries", ...(boundaryChe
 } : {
   status: "pass",
   affectedPaths: inspectionPaths.length > 0 ? inspectionPaths : ["."],
-  reason: boundaryCheck.rules.length === 0 ? "No executable architecture boundary rules are configured." : "Configured architecture boundary rules passed.",
-  nextAction: boundaryCheck.rules.length === 0 ? "Add a rule only after an approved, recurring boundary failure." : "No action required.",
-  evidence: ".claude/project/boundaries.json",
+    reason: `Configured architecture boundary rules passed across ${boundaryCheck.inspectedPaths.length} inspected path(s).`,
+    nextAction: "No action required.",
+    evidence: `.claude/project/boundaries.json (${boundaryCheck.rules.length} rules; ${boundaryCheck.inspectedPaths.length} paths)`,
 }) }));
 
 // Craft sensors always run (vibe / outside-the-loop and /harness alike).
@@ -252,31 +276,71 @@ for (const { sensorId, label, result } of runAllMaintainabilitySensors(root, ins
     reason: result.reason,
     nextAction: result.nextAction,
     evidence: `.claude/project/maintainability.json (${sensorId}) or built-in defaults`,
+    metrics: { finding_count: Array.isArray(result.findings) ? result.findings.length : 0 },
   }));
+  process.stdout.write(`${result.status.toUpperCase().padEnd(5)} ${label}\n`);
+}
+
+for (const { sensorId, label, result } of [
+  { sensorId: "dependency-cycles", label: "Dependency cycles", result: checkDependencyCycles(root, inspectionPaths) },
+  { sensorId: "coupling-impact", label: "Coupling impact", result: checkCouplingImpact(root, inspectionPaths) },
+]) {
+  record(createSensorResult({
+    sensorId,
+    status: result.status,
+    affectedPaths: result.affectedPaths,
+    reason: result.reason,
+    nextAction: result.nextAction,
+    evidence: ".claude/project/dependency-sensors.json or built-in defaults",
+    metrics: result.metrics,
+  }));
+  process.stdout.write(`${result.status.toUpperCase().padEnd(5)} ${label}\n`);
+}
+
+for (const [sensorId, label, result] of [
+  ["test-integrity", "Test integrity", checkTestIntegrity(root, inspectionPaths)],
+  ["coverage-effectiveness", "Coverage effectiveness", checkCoverage(root, inspectionPaths)],
+  ["mutation-effectiveness", "Mutation effectiveness", checkMutation(root, inspectionPaths)],
+  ["property-effectiveness", "Property-test effectiveness", checkGenerative(root, "property")],
+  ["fuzz-effectiveness", "Fuzz-test effectiveness", checkGenerative(root, "fuzz")],
+]) {
+  if (!result) continue;
+  const normalized = createSensorResult({ sensorId, status: result.status, affectedPaths: result.affectedPaths, reason: result.reason, nextAction: result.nextAction, evidence: ".claude/project/regression-sensors.json and configured report", metrics: result.metrics });
+  results.push(withPolicy(normalized, "regression-effectiveness"));
   process.stdout.write(`${result.status.toUpperCase().padEnd(5)} ${label}\n`);
 }
 
 const reportPath = path.join(root, ".claude", "specs", "evidence", "runtime", "sensor-report.json");
 fs.mkdirSync(path.dirname(reportPath), { recursive: true });
+const workspace = workspaceFingerprint(root);
+const rawStatus = reportStatus(results);
+const blockingStatus = results.some((result) => result.disposition === "blocking" && result.status !== "pass") ? "fail" : "pass";
+const generatedAt = new Date().toISOString();
+const runtimeMs = Date.now() - runStartedAt;
 fs.writeFileSync(reportPath, `${JSON.stringify({
-  generated_at: new Date().toISOString(),
+  generated_at: generatedAt,
+  runtime_ms: runtimeMs,
   root,
   changed_paths: changedPaths,
   scope: changedPaths.length > 0 ? "changed-path" : "project-wide",
-  status: reportStatus(results),
+  status: rawStatus,
+  blocking_status: blockingStatus,
+  workspace,
+  inspected_paths: inspectionPaths,
   sensors: results,
 }, null, 2)}\n`, "utf8");
-const historyPath = path.join(root, ".claude", "specs", "evidence", "runtime", "sensor-history.jsonl");
-const timestamp = new Date().toISOString();
 for (const result of results) {
-  fs.appendFileSync(historyPath, `${JSON.stringify({
-    timestamp,
+  appendSensorHistory(root, {
+    timestamp: generatedAt,
+    workspace_sha256: workspace.sha256,
+    runtime_ms: runtimeMs,
     sensor_id: result.sensor_id || "unidentified-sensor",
     status: result.status,
     waiver_id: result.waiver_id || null,
     affected_paths: result.affected_paths,
-  })}\n`, "utf8");
+    metrics: result.metrics || null,
+  });
 }
 process.stdout.write(`INFO  Sensor report: ${reportPath}\n`);
-process.exit(results.some((result) => result.status === "fail") ||
-  (argumentsParsed.failOnWarn && results.some((result) => result.status === "warn" && !result.waiver_id)) ? 1 : 0);
+process.exit(blockingStatus === "fail" ||
+  (argumentsParsed.failOnWarn && results.some((result) => result.status === "warn" && result.disposition !== "waived")) ? 1 : 0);

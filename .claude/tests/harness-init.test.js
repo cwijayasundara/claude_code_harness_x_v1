@@ -30,13 +30,15 @@ test("initializes a progressive-disclosure CLAUDE.md without overwriting it", ()
   const controlManifest = JSON.parse(fs.readFileSync(path.join(targetRoot, ".claude", "harness-manifest.json"), "utf8"));
   assert.equal(controlManifest.version, 1);
   assert.ok(controlManifest.controls.some((control) => control.id === "profile-verification"));
-  assert.equal(controlManifest.control_budget.max_active, 18);
+  assert.equal(controlManifest.control_budget.max_active, 19);
   assert.ok(controlManifest.control_budget.baseline_ids.includes("delivery-workflow"));
   assert.ok(controlManifest.control_budget.baseline_ids.includes("file-size"));
   assert.ok(controlManifest.control_budget.baseline_ids.includes("function-size"));
   assert.ok(controlManifest.control_budget.baseline_ids.includes("exception-handling"));
   assert.ok(controlManifest.control_budget.baseline_ids.includes("near-duplication"));
+  assert.ok(controlManifest.controls.some((control) => control.id === "regression-effectiveness" && control.status === "active"));
   assert.ok(fs.existsSync(path.join(targetRoot, ".claude", "project", "maintainability.json")));
+  assert.ok(fs.existsSync(path.join(targetRoot, ".claude", "project", "regression-sensors.json")));
   assert.ok(fs.existsSync(path.join(targetRoot, ".claude", "project", "large-codebase.md")));
   const settings = JSON.parse(fs.readFileSync(path.join(targetRoot, ".claude", "settings.json"), "utf8"));
   assert.ok(settings.permissions.deny.includes("Read(./**/generated/**)"));

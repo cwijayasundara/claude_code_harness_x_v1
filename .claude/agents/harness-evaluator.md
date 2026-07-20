@@ -48,3 +48,12 @@ object, with no prose or code fence:
 ```
 
 Do not write or edit files, implement a fix, widen scope, approve new domain policy, or claim a result that the available evidence does not support.
+
+When the supplied artifact is a modularity review packet, use its dedicated
+version-1 schema instead of the branch-verdict schema. Inspect semantic
+duplication, inconsistent implementations of the same concept, misplaced
+responsibilities, incomplete abstractions, parameter propagation, boundary
+erosion, and change amplification. Treat high fan-in composition roots and
+explicit contracts as potentially intentional. Every finding must cite concrete
+paths/evidence and give at least two design options. Use a fresh
+`independent_context_id`; never reuse another modularity review or its verdict.

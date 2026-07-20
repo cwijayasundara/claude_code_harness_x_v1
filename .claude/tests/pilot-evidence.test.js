@@ -20,6 +20,8 @@ function project(policy = {}) {
       minimum_sensor_correction_rate: 0.9,
       maximum_mean_provider_cost_per_accepted_story_usd: 5,
       minimum_brownfield_graph_useful_rate: 0.6,
+      minimum_modularity_review_precision: 0.7,
+      minimum_modularity_review_value_rate: 0.5,
     },
     ...policy,
   }));
@@ -34,6 +36,8 @@ function pilot(id, scenarioType) {
     outcome: "accepted", first_pass_accepted: true, story_count: 1,
     human_review_minutes: 10, escaped_defects: 0, observation_days: 14,
     sensor_findings: 1, sensor_true_positives: 1, sensor_findings_corrected: 1,
+    modularity_reviews: 1, modularity_findings: 1, modularity_true_positives: 1,
+    modularity_useful_reviews: 1, modularity_review_minutes: 3,
     provider_cost_usd: 1, graph_queries: 2, graph_useful_results: 2,
     evidence_refs: ["branch-readiness", "human-review", "defect-observation", "sensor-assessment", "provider-receipt", ...(scenarioType === "brownfield" ? ["graph-assessment"] : [])]
       .map((label) => ({ label, path: "evidence.json" })),
@@ -51,6 +55,8 @@ test("requires matched real pilots and leaves rollout to a human", () => {
   assert.equal(report.decision_authority, "human");
   assert.equal(report.metrics.sensor_precision, 1);
   assert.equal(report.metrics.brownfield_graph_useful_rate, 1);
+  assert.equal(report.metrics.modularity_review_precision, 1);
+  assert.equal(report.metrics.modularity_review_value_rate, 1);
 });
 
 test("holds rollout when measured quality misses policy", () => {

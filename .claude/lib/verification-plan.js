@@ -2,7 +2,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const CADENCES = new Set(["story-fast", "pre-pr", "scheduled"]);
-const KINDS = new Set(["install-build", "unit", "integration", "contract", "hermetic-system", "local-smoke", "lint", "type", "security", "migration", "performance", "other"]);
+const KINDS = new Set(["install-build", "unit", "integration", "contract", "hermetic-system", "local-smoke", "browser-e2e", "lint", "type", "security", "migration", "performance", "other"]);
 const REQUIRED_PRE_PR_KINDS = ["install-build", "unit", "integration", "hermetic-system", "local-smoke", "lint", "type", "security"];
 const EXTERNAL_KINDS = new Set(["database", "llm", "embedding", "http", "queue", "filesystem", "clock", "other"]);
 const DOUBLE_TYPES = new Set(["stub", "fake", "in-memory", "ephemeral-postgresql", "local-emulator"]);
@@ -53,11 +53,11 @@ function validateVerificationPlan(plan) {
       if (!Array.isArray(check.args) || check.args.some((arg) => typeof arg !== "string")) errors.push(`${label}.args must be a string array.`);
       if (!Number.isInteger(check.timeout_ms) || check.timeout_ms < 100 || check.timeout_ms > 3600000) errors.push(`${label}.timeout_ms must be 100..3600000.`);
     } else if (!check.configuration_help) errors.push(`${label}.configuration_help is required while unconfigured.`);
-    if (["unit", "integration", "hermetic-system", "local-smoke"].includes(check.kind)) {
+    if (["unit", "integration", "hermetic-system", "local-smoke", "browser-e2e"].includes(check.kind)) {
       if (check.hermetic !== true) errors.push(`${label} must declare hermetic=true.`);
       if (!Array.isArray(check.boundary_ids)) errors.push(`${label}.boundary_ids must be an array.`);
     }
-    if (check.kind === "local-smoke") {
+    if (["local-smoke", "browser-e2e"].includes(check.kind)) {
       if (!check.public_seam) errors.push(`${label}.public_seam is required.`);
       if (!check.safe_local_config) errors.push(`${label}.safe_local_config is required.`);
       if (!Array.isArray(check.journeys) || !check.journeys.some((journey) => journey.type === "success") || !check.journeys.some((journey) => journey.type === "failure")) {
@@ -69,7 +69,7 @@ function validateVerificationPlan(plan) {
     if (!plan.checks.some((check) => check.cadence === "pre-pr" && check.kind === required)) errors.push(`pre-pr requires a '${required}' check.`);
   }
   for (const check of plan.checks) for (const boundaryId of check.boundary_ids || []) if (!boundaryIds.has(boundaryId)) errors.push(`Check '${check.id}' references unknown boundary '${boundaryId}'.`);
-  for (const check of plan.checks.filter((item) => item.kind === "hermetic-system" || item.kind === "local-smoke")) for (const boundaryId of boundaryIds) {
+  for (const check of plan.checks.filter((item) => item.kind === "hermetic-system" || item.kind === "local-smoke" || item.kind === "browser-e2e")) for (const boundaryId of boundaryIds) {
     if (!check.boundary_ids.includes(boundaryId)) errors.push(`Hermetic '${check.kind}' check '${check.id}' does not double declared boundary '${boundaryId}'.`);
   }
   for (const boundary of plan.boundaries) if (!ids.has(boundary.contract_check_id)) errors.push(`Boundary '${boundary.id}' references unknown contract check '${boundary.contract_check_id}'.`);

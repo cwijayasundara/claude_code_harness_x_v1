@@ -1,7 +1,7 @@
 {
   "version": 1,
   "control_budget": {
-    "max_active": 18,
+    "max_active": 19,
     "baseline_ids": [
       "delivery-workflow",
       "structured-requirements",
@@ -12,10 +12,13 @@
       "architecture-boundaries",
       "file-size",
       "function-size",
+      "code-complexity",
       "exception-handling",
       "logging-discipline",
       "performance-heuristics",
       "near-duplication",
+      "dependency-cycles",
+      "coupling-impact",
       "ci-verification",
       "static-security-analysis"
     ]
@@ -90,8 +93,8 @@
       "cost": "One bounded independent evaluator pass.",
       "review_date": "2026-10-01",
       "removal_criteria": "Retire only when a stronger independent review control replaces it.",
-      "execution": "harness-evaluator after deterministic evidence.",
-      "self_correction": "Address evaluator findings with focused evidence, or explicitly escalate the unresolved trade-off to a human reviewer."
+      "execution": "harness-evaluator after deterministic evidence; risk-triggered modularity packets require repeated independent reviews merged by harness-modularity.",
+      "self_correction": "Address evaluator findings with focused evidence, classify an intentional hub through an approved expiring decision, or escalate the unresolved architecture trade-off to a human reviewer."
     },
     {
       "id": "destructive-git-safety",
@@ -189,6 +192,25 @@
       "self_correction": "Extract cohesive helpers until each function is within max_lines; rerun sensors."
     },
     {
+      "id": "code-complexity",
+      "kind": "sensor",
+      "direction": "feedback",
+      "execution_type": "computational",
+      "regulates": ["maintainability"],
+      "axis": "maintainability",
+      "cadence": "session",
+      "severity": "advisory",
+      "status": "active",
+      "scope": "Changed source functions — argument count and estimated cyclomatic complexity.",
+      "owner": "Architecture owner",
+      "introduced_for": "Agent-generated functions accumulating parameters and branching until they become unsafe to change.",
+      "cost": "Fast structural scan; report-only until native profile tools supersede or confirm it.",
+      "review_date": "2026-10-01",
+      "removal_criteria": "Replace when every active language profile provides an equivalent AST-aware complexity check.",
+      "execution": "Built-in harness-sensors code-complexity check with project thresholds.",
+      "self_correction": "Introduce a cohesive parameter object or split decision logic along named responsibilities, then rerun sensors."
+    },
+    {
       "id": "exception-handling",
       "kind": "sensor",
       "direction": "feedback",
@@ -265,6 +287,64 @@
       "self_correction": "Reuse one implementation or extract a shared helper; keep parallel copies only with justified-divergence, then rerun sensors."
     },
     {
+      "id": "dependency-cycles",
+      "kind": "sensor",
+      "direction": "feedback",
+      "execution_type": "computational",
+      "regulates": ["maintainability", "architecture-fitness"],
+      "axis": "architecture",
+      "cadence": "session",
+      "severity": "advisory",
+      "status": "active",
+      "scope": "Repository-local JS/TS/Python dependency cycles intersecting changed source.",
+      "owner": "Architecture owner",
+      "introduced_for": "Generated imports creating cycles and unstable dependency direction across modules.",
+      "cost": "Fast repository dependency graph; report-only during parser baseline.",
+      "review_date": "2026-10-01",
+      "removal_criteria": "Replace with a stronger native dependency graph adapter with equivalent normalized evidence.",
+      "execution": "Built-in dependency-sensors graph and changed-code cycle analysis.",
+      "self_correction": "Break the cycle behind a stable lower-level interface or correct dependency direction; do not move code merely to silence the graph."
+    },
+    {
+      "id": "coupling-impact",
+      "kind": "sensor",
+      "direction": "feedback",
+      "execution_type": "computational",
+      "regulates": ["maintainability", "architecture-fitness"],
+      "axis": "architecture",
+      "cadence": "session",
+      "severity": "advisory",
+      "status": "active",
+      "scope": "Fan-in and fan-out of changed repository-local JS/TS/Python modules.",
+      "owner": "Architecture owner",
+      "introduced_for": "High-impact modules receiving agent changes without proportionate regression or semantic review.",
+      "cost": "Reuses the fast dependency graph and emits compact metrics.",
+      "review_date": "2026-10-01",
+      "removal_criteria": "Retire if graph metrics do not improve review triage or a stronger impact service replaces them.",
+      "execution": "Built-in dependency-sensors fan-in/fan-out analysis for changed modules.",
+      "self_correction": "Increase regression and semantic review for high-impact modules; refactor only when an approved cohesive seam is clear."
+    },
+    {
+      "id": "regression-effectiveness",
+      "kind": "sensor",
+      "direction": "feedback",
+      "execution_type": "computational",
+      "regulates": ["behaviour", "maintainability"],
+      "axis": "behaviour",
+      "cadence": "scheduled",
+      "severity": "advisory",
+      "status": "active",
+      "scope": "Configured coverage and mutation reports, including changed source files.",
+      "owner": "Test architecture owner",
+      "introduced_for": "AI-generated tests achieving execution coverage without assertions that detect behavioral regressions.",
+      "cost": "Coverage is moderate; mutation testing is incremental or scheduled because it is resource intensive.",
+      "review_date": "2026-10-01",
+      "removal_criteria": "Replace only with equivalent regression-effectiveness evidence integrated into repository CI.",
+      "net_add_justification": "Coverage alone does not detect weak AI-generated assertions; mutation, test-integrity, property, and fuzz evidence cover a distinct recurring production risk.",
+      "execution": "harness-sensors reads configured regression reports; harness-regression safely executes explicit incremental commands.",
+      "self_correction": "Restore deleted regression protection, strengthen assertions around surviving mutants, and preserve minimized property/fuzz failures as deterministic tests."
+    },
+    {
       "id": "ci-verification",
       "kind": "sensor",
       "direction": "feedback",
@@ -280,7 +360,7 @@
       "cost": "One project-wide configured sensor run.",
       "review_date": "2026-10-01",
       "removal_criteria": "Retire only if CI invokes the equivalent configured runner directly.",
-      "execution": "harness-ci.js invokes harness-sensors.js --all --fail-on-warn.",
+      "execution": "harness-ci.js invokes harness-sensors.js --all and enforces each control's declared policy disposition.",
       "self_correction": "Reproduce the failed configured sensor locally, repair the cause, and attach fresh CI evidence."
     },
     {

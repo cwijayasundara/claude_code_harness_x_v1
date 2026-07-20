@@ -1,15 +1,15 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-07-19T08:33:17.538Z",
+  "generated_at": "2026-07-20T07:46:15.513Z",
   "measurement_type": "synthetic-deterministic-release-canary",
   "status": "pass",
-  "elapsed_ms": 1968,
+  "elapsed_ms": 2053,
   "scenarios": [
     {
       "name": "greenfield",
       "type": "greenfield",
       "status": "pass",
-      "elapsed_ms": 947,
+      "elapsed_ms": 989,
       "story_state": "STORY_VERIFIED",
       "pre_pr_status": "pass",
       "context_estimated_tokens": 24,
@@ -26,7 +26,7 @@
       "name": "brownfield",
       "type": "brownfield",
       "status": "pass",
-      "elapsed_ms": 872,
+      "elapsed_ms": 909,
       "story_state": "STORY_VERIFIED",
       "pre_pr_status": "pass",
       "context_estimated_tokens": 24,
@@ -55,6 +55,7 @@
     "human_review_minutes",
     "escaped_defects",
     "sensor_precision_and_correction",
+    "modularity_review_precision_and_value",
     "provider_cost_per_accepted_story",
     "production_graph_retrieval_value"
   ],

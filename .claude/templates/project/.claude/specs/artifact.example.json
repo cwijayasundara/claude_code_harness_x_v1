@@ -12,6 +12,10 @@
   "approved_at": null,
   "content": {
     "title": "Replace with a concise story",
-    "acceptance_criteria": ["AC-001: Replace with observable behaviour"]
+    "acceptance_criteria": ["AC-001: Replace with observable behaviour"],
+    "size": "medium",
+    "story_points": 5,
+    "estimate_confidence": "medium",
+    "estimate_basis": ["Explain the seams, uncertainty, and test scope behind the estimate"]
   }
 }

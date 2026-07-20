@@ -5,6 +5,9 @@ const { spawnSync } = require("node:child_process");
 const { currentBranch } = require("./specifications");
 const { assertStoryContractEvolution } = require("./design-evolution");
 const { appendEvent, CLASSIFICATIONS } = require("./improvement-ratchet");
+const { workspaceFingerprint } = require("./sensor-scope");
+const { assertEvidenceFresh } = require("./sensor-operations");
+const { FEATURE_SURFACES } = require("./browser-e2e-contract");
 
 const STATES = ["READY", "RED_TEST", "IMPLEMENT", "STORY_REVIEW", "FAST_SENSORS", "STORY_VERIFIED", "HUMAN_DECISION_REQUIRED"];
 const CONTRACT_ARRAYS = [
@@ -12,6 +15,7 @@ const CONTRACT_ARRAYS = [
   "allowed_change_scope", "acceptance_criteria", "test_case_ids", "test_data_ids",
   "required_sensors", "performance_budgets", "routing_risks", "human_decisions",
   "reuse_targets",
+  "feature_surfaces",
 ];
 
 const REQUIRED_STORY_EVIDENCE = Object.freeze([
@@ -76,11 +80,12 @@ function validateContract(contract, storyId, context = {}) {
   const errors = [];
   if (contract.story_id !== storyId) errors.push(`story_id must be '${storyId}'.`);
   for (const field of CONTRACT_ARRAYS) if (!Array.isArray(contract[field])) errors.push(`${field} must be an array.`);
-  for (const field of ["source_requirements", "approved_design_refs", "allowed_change_scope", "acceptance_criteria", "test_case_ids", "required_sensors"]) {
+  for (const field of ["source_requirements", "approved_design_refs", "allowed_change_scope", "acceptance_criteria", "test_case_ids", "required_sensors", "feature_surfaces"]) {
     if (Array.isArray(contract[field]) && contract[field].length === 0) errors.push(`${field} must not be empty.`);
   }
   const allowedRisks = new Set(["architecture", "domain", "security", "privacy", "public-contract", "migration", "performance"]);
   if (Array.isArray(contract.routing_risks)) for (const risk of contract.routing_risks) if (!allowedRisks.has(risk)) errors.push(`routing_risks contains unknown risk '${risk}'.`);
+  if (Array.isArray(contract.feature_surfaces)) for (const surface of contract.feature_surfaces) if (!FEATURE_SURFACES.has(surface)) errors.push(`feature_surfaces contains unknown surface '${surface}'.`);
   errors.push(...assertStoryContractEvolution(contract, context));
   return errors;
 }
@@ -103,6 +108,10 @@ function appendTransition(state, to, evidence) {
 function assertBoundBranch(root, state) {
   const branch = currentBranch(root);
   if (branch !== state.branch) throw new Error(`Story '${state.story_id}' is bound to branch '${state.branch}', not '${branch}'.`);
+  const change = loadIndex(root).changes?.[state.change_id];
+  if (change?.reapproval_required || change?.gates?.G4?.status !== "approved") {
+    throw new Error(`Change '${state.change_id}' requires G0-G4 reapproval before story execution can continue.`);
+  }
 }
 
 function assertFresh(evidence, state, label) {
@@ -313,7 +322,9 @@ function recordSensors(root, storyId, file) {
   const evidence = evidenceFile(root, file);
   assertFresh(evidence, loaded.state, "Sensor");
   const report = evidence.data;
-  if (report.status !== "pass" || !Array.isArray(report.sensors)) throw new Error("FAST_SENSORS requires a normalized passing sensor report.");
+  if (report.blocking_status !== "pass" || !Array.isArray(report.sensors)) throw new Error("FAST_SENSORS requires a normalized report with passing blocking_status.");
+  if (!report.workspace?.sha256) throw new Error("FAST_SENSORS requires a workspace fingerprint.");
+  if (report.workspace.sha256 !== workspaceFingerprint(root).sha256) throw new Error("Sensor report is stale because product code changed after it ran.");
   const contract = approvedContract(root, loaded.state);
   const passed = new Set(report.sensors.filter((sensor) => sensor.status === "pass").map((sensor) => sensor.sensor_id));
   const missing = contract.required_sensors.filter((sensor) => !passed.has(sensor));
@@ -330,6 +341,9 @@ function verify(root, storyId) {
   assertBoundBranch(root, loaded.state);
   requireState(loaded.state.state, ["FAST_SENSORS"]);
   for (const [label, evidence] of Object.entries(loaded.state.evidence)) assertEvidenceUnchanged(root, evidence, label);
+  const sensorWorkspace = loaded.state.evidence.fast_sensors.data.workspace;
+  if (sensorWorkspace.sha256 !== workspaceFingerprint(root).sha256) throw new Error("fast_sensors evidence is stale because product code changed after it ran.");
+  assertEvidenceFresh(root, loaded.state.evidence.fast_sensors.data, "completion");
   const contract = approvedContract(root, loaded.state);
   for (const actual of productChanges(root)) if (!withinScope(actual, contract.allowed_change_scope)) throw new Error(`Git change '${actual}' is outside allowed_change_scope.`);
   appendTransition(loaded.state, "STORY_VERIFIED", loaded.state.evidence.fast_sensors.path);

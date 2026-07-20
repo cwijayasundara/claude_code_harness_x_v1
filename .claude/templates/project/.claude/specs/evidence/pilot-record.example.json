@@ -13,6 +13,11 @@
   "sensor_findings": 1,
   "sensor_true_positives": 1,
   "sensor_findings_corrected": 1,
+  "modularity_reviews": 1,
+  "modularity_findings": 1,
+  "modularity_true_positives": 1,
+  "modularity_useful_reviews": 1,
+  "modularity_review_minutes": 4,
   "provider_cost_usd": 1.25,
   "evidence_refs": [
     { "label": "branch-readiness", "path": ".claude/specs/evidence/change-001-branch-readiness.json" },

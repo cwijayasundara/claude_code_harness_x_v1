@@ -5,6 +5,7 @@ const path = require("node:path");
 const { execFileSync } = require("node:child_process");
 const test = require("node:test");
 const ratchet = require("../lib/story-ratchet");
+const { workspaceFingerprint } = require("../lib/sensor-scope");
 
 function fixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "story-ratchet-"));
@@ -27,7 +28,7 @@ function fixture() {
   const contract = {
     id: "C-1-contract", package: "plans", status: "approved",
     content: {
-      story_id: "C-1-story-1", source_requirements: ["REQ-1"], approved_design_refs: ["DES-1"],
+      story_id: "C-1-story-1", feature_surfaces: ["internal"], source_requirements: ["REQ-1"], approved_design_refs: ["DES-1"],
       dependency_story_ids: [], allowed_change_scope: ["src", "tests"], acceptance_criteria: ["AC-1"],
       test_case_ids: ["TC-1"], test_data_ids: [], required_sensors: ["unit"], performance_budgets: [], routing_risks: [], human_decisions: [],
       implementation_posture: "first-slice", reuse_targets: [],
@@ -57,6 +58,16 @@ function evidence(root, name, value) {
   return relative;
 }
 
+function sensorReport(root) {
+  return {
+    generated_at: new Date(Date.now() + 1000).toISOString(),
+    status: "pass",
+    blocking_status: "pass",
+    workspace: workspaceFingerprint(root),
+    sensors: [{ sensor_id: "unit", status: "pass" }],
+  };
+}
+
 test("moves one approved story through red, implementation, review, sensors, and verification", () => {
   const root = fixture();
   const started = ratchet.start(root, { changeId: "C-1", storyId: "C-1-story-1" });
@@ -74,7 +85,7 @@ test("moves one approved story through red, implementation, review, sensors, and
   assert.equal(ratchet.recordImplementation(root, "C-1-story-1", implementation).state, "IMPLEMENT");
   const review = evidence(root, "review", { verdict: "pass", blocking_findings: [], non_blocking_findings: [], missing_or_stale_evidence: [], required_human_decisions: [], reviewed_paths: ["src/app.py", "tests/test_app.py"], evidence_refs: [implementation] });
   assert.equal(ratchet.recordReview(root, "C-1-story-1", review).state, "STORY_REVIEW");
-  const sensors = evidence(root, "sensors", { generated_at: new Date(Date.now() + 1000).toISOString(), status: "pass", sensors: [{ sensor_id: "unit", status: "pass" }] });
+  const sensors = evidence(root, "sensors", sensorReport(root));
   assert.equal(ratchet.recordSensors(root, "C-1-story-1", sensors).state, "FAST_SENSORS");
   assert.equal(ratchet.verify(root, "C-1-story-1").state, "STORY_VERIFIED");
   assert.deepEqual(ratchet.feedbackProvenance(ratchet.loadState(root, "C-1-story-1").state), [
@@ -92,6 +103,18 @@ test("rejects implementation outside the approved change scope", () => {
   fs.writeFileSync(path.join(root, "outside.py"), "bad = True\n");
   const passing = evidence(root, "implementation", { command: "test", exit_code: 0, changed_paths: ["src/app.py"], test_paths: ["tests/test_app.py"] });
   assert.throws(() => ratchet.recordImplementation(root, "C-1-story-1", passing), /outside allowed_change_scope/);
+});
+
+test("prompt amendment reapproval requirement pauses an active story", () => {
+  const root = fixture();
+  ratchet.start(root, { changeId: "C-1", storyId: "C-1-story-1" });
+  const indexPath = path.join(root, ".claude", "specs", "index.json");
+  const index = JSON.parse(fs.readFileSync(indexPath, "utf8"));
+  index.changes["C-1"].reapproval_required = true;
+  delete index.changes["C-1"].gates.G4;
+  fs.writeFileSync(indexPath, JSON.stringify(index));
+  const red = evidence(root, "red-amended", { command: "test", exit_code: 1, expected_failure: "missing", observed_failure: "missing", test_paths: ["tests/test_app.py"] });
+  assert.throws(() => ratchet.recordRed(root, "C-1-story-1", red), /requires G0-G4 reapproval/);
 });
 
 test("a revise verdict permits only one configured repair", () => {
@@ -126,7 +149,19 @@ test("does not verify a story after recorded evidence is changed", () => {
   fs.writeFileSync(path.join(root, "src", "app.py"), "def value(): return 2\n");
   ratchet.recordImplementation(root, "C-1-story-1", evidence(root, "implementation", { command: "test", exit_code: 0, changed_paths: ["src/app.py"], test_paths: ["tests/test_app.py"] }));
   ratchet.recordReview(root, "C-1-story-1", evidence(root, "review", { verdict: "pass", blocking_findings: [], non_blocking_findings: [], missing_or_stale_evidence: [], required_human_decisions: [], reviewed_paths: ["src/app.py"], evidence_refs: [] }));
-  ratchet.recordSensors(root, "C-1-story-1", evidence(root, "sensors", { generated_at: new Date(Date.now() + 1000).toISOString(), status: "pass", sensors: [{ sensor_id: "unit", status: "pass" }] }));
+  ratchet.recordSensors(root, "C-1-story-1", evidence(root, "sensors", sensorReport(root)));
   fs.writeFileSync(path.join(root, ".claude", "work", "red.json"), "{}\n");
   assert.throws(() => ratchet.verify(root, "C-1-story-1"), /red_test evidence changed/);
+});
+
+test("rejects fresh-looking sensor evidence after product code changes", () => {
+  const root = fixture();
+  ratchet.start(root, { changeId: "C-1", storyId: "C-1-story-1" });
+  ratchet.recordRed(root, "C-1-story-1", evidence(root, "red", { command: "test", exit_code: 1, expected_failure: "missing", observed_failure: "missing", test_paths: ["tests/test_app.py"] }));
+  fs.writeFileSync(path.join(root, "src", "app.py"), "def value(): return 2\n");
+  ratchet.recordImplementation(root, "C-1-story-1", evidence(root, "implementation", { command: "test", exit_code: 0, changed_paths: ["src/app.py"], test_paths: ["tests/test_app.py"] }));
+  ratchet.recordReview(root, "C-1-story-1", evidence(root, "review", { verdict: "pass", blocking_findings: [], non_blocking_findings: [], missing_or_stale_evidence: [], required_human_decisions: [], reviewed_paths: ["src/app.py"], evidence_refs: [] }));
+  ratchet.recordSensors(root, "C-1-story-1", evidence(root, "sensors", sensorReport(root)));
+  fs.writeFileSync(path.join(root, "src", "app.py"), "def value(): return 3\n");
+  assert.throws(() => ratchet.verify(root, "C-1-story-1"), /fast_sensors evidence is stale/);
 });

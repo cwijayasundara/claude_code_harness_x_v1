@@ -27,3 +27,14 @@ test("rejects an in-memory PostgreSQL double without explicit semantic limits", 
   candidate.boundaries[0].test_double = "in-memory";
   assert.match(validateVerificationPlan(candidate).join("\n"), /requires postgres_semantics_required=false/);
 });
+
+test("accepts a configured hermetic browser E2E check with success and failure journeys", () => {
+  const candidate = plan();
+  candidate.checks.push({
+    id: "browser-journeys", label: "Browser journeys", cadence: "pre-pr", kind: "browser-e2e", configured: true,
+    command: "npx", args: ["playwright", "test"], timeout_ms: 60000, hermetic: true, boundary_ids: ["postgres"],
+    public_seam: "web UI", safe_local_config: "ephemeral app and database",
+    journeys: [{ id: "happy", type: "success" }, { id: "invalid", type: "failure" }],
+  });
+  assert.deepEqual(validateVerificationPlan(candidate), []);
+});

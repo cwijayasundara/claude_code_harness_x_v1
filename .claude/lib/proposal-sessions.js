@@ -55,6 +55,8 @@ function renderG0Session({ packs, ready }) {
   const brd = packs.brd || [];
   const prd = packs.prd || [];
   const interpretations = [...brd, ...prd];
+  const analyses = packs.analysis || [];
+  const canvases = packs["reasons-canvas"] || [];
 
   lines.push("### Captured sources", "");
   if (!sources.length) lines.push("_No source package records._", "");
@@ -97,18 +99,42 @@ function renderG0Session({ packs, ready }) {
     lines.push("");
   }
 
+  lines.push("### SPDD analysis", "");
+  if (!analyses.length) lines.push("_No SPDD analysis registered._", "");
+  for (const { record, content } of analyses) {
+    lines.push(`#### ${record.id}`, "");
+    for (const field of ["domain_concepts", "strategic_direction", "risks", "requirement_gaps"]) {
+      const values = listish(content?.[field]);
+      lines.push(`- **${field.replaceAll("_", " ")}:** ${values.length ? values.map((item) => typeof item === "string" ? item : JSON.stringify(item)).join("; ") : "_missing_"}`);
+    }
+    lines.push("");
+  }
+
+  lines.push("### REASONS Canvas", "");
+  if (!canvases.length) lines.push("_No REASONS Canvas registered._", "");
+  for (const { record, content } of canvases) {
+    lines.push(`#### ${record.id}`, "");
+    for (const section of ["requirements", "entities", "approach", "structure", "operations", "norms", "safeguards"]) {
+      const value = content?.[section];
+      lines.push(`- **${section}:** ${value ? JSON.stringify(value) : "_missing_"}`);
+    }
+    lines.push(`- **sync:** ${content?.sync ? JSON.stringify(content.sync) : "_missing_"}`, "");
+  }
+
   lines.push(
     "### Human checklist before approve",
     "",
     "- [ ] Source file is the governing BRD/PRD (not a chat summary).",
     "- [ ] Outcomes and scope match intent; contradictions are listed as open questions.",
     "- [ ] Assumptions will not be silently treated as requirements.",
+    "- [ ] For PRD intake, the SPDD analysis and all seven REASONS sections preserve business intent.",
+    "- [ ] For direct BRD intake, the rationale and sufficiency checks justify bypassing SPDD transformation.",
     "",
   );
   return `${lines.join("\n")}\n`;
 }
 
-function renderG1Session({ packs, ready }) {
+function renderG1Session({ packs, ready, analysis }) {
   const lines = [
     "## G1 stories & dependencies session (human decision)",
     "",
@@ -121,6 +147,7 @@ function renderG1Session({ packs, ready }) {
   const epics = packs.epics || [];
   const stories = packs.stories || [];
   const deps = packs.dependencies || [];
+  const allocations = packs.allocations || [];
 
   lines.push("### Epics", "");
   if (!epics.length) lines.push("_No epics registered._", "");
@@ -135,6 +162,9 @@ function renderG1Session({ packs, ready }) {
   for (const { record, content } of stories) {
     lines.push(`#### ${record.id}`, "");
     lines.push(`- **Title:** ${content?.title || "_untitled_"}`);
+    lines.push(`- **Estimate:** ${content?.size || "_unset_"} / ${content?.story_points ?? "_unset_"} points / confidence ${content?.estimate_confidence || "_unset_"}`);
+    const basis = listish(content?.estimate_basis);
+    if (basis.length) lines.push(`- **Estimate basis:** ${basis.join("; ")}`);
     const ac = listish(content?.acceptance_criteria || content?.acceptanceCriteria);
     if (ac.length) {
       lines.push("- **Acceptance criteria:**");
@@ -170,12 +200,26 @@ function renderG1Session({ packs, ready }) {
   if (!deps.length) lines.push("_No dependencies artifact._");
   lines.push("");
 
+  lines.push("### Derived plan", "");
+  lines.push(`- **Topological order:** ${analysis?.topological_order?.join(" -> ") || "_unavailable_"}`);
+  lines.push(`- **Dependency-ready stories:** ${analysis?.dependency_ready_story_ids?.join(", ") || "_none_"}`);
+  lines.push(`- **Critical path:** ${analysis?.critical_path?.join(" -> ") || "_unavailable_"} (${analysis?.critical_path_points ?? 0} points)`, "");
+
+  lines.push("### Allocation clusters", "");
+  if (!allocations.length) lines.push("_No allocations artifact._", "");
+  for (const { content } of allocations) for (const cluster of listish(content?.clusters)) {
+    lines.push(`- **${cluster.id || "unnamed"}:** ${(cluster.story_ids || []).join(", ")} · ${cluster.total_points ?? "?"} points · depends on ${(cluster.depends_on_clusters || []).join(", ") || "none"}`);
+  }
+  lines.push("");
+
   lines.push(
     "### Human checklist before approve",
     "",
     "- [ ] Stories are vertical slices with observable acceptance, not layer tasks.",
     "- [ ] Dependency order is buildable (no hidden cycles).",
     "- [ ] Similar capabilities are ordered so later stories can reuse earlier seams.",
+    "- [ ] Estimates separate effort from priority and state their confidence/basis.",
+    "- [ ] Every story appears in exactly one cohesive allocation cluster.",
     "",
   );
   return `${lines.join("\n")}\n`;
@@ -253,6 +297,7 @@ function renderG4Session({ packs, ready }) {
   ];
 
   const plans = packs.plans || [];
+  const traceability = packs.traceability || [];
   if (!plans.length) {
     lines.push("_No story contracts in plans/._", "");
   }
@@ -265,6 +310,8 @@ function renderG4Session({ packs, ready }) {
     }
     lines.push(`#### ${content.story_id} (\`${record.id}\`)`, "");
     lines.push(`- **Implementation posture:** \`${content.implementation_posture || "_unset_"}\``);
+    lines.push(`- **Feature surfaces:** ${listish(content.feature_surfaces).join(", ") || "_unset_"}`);
+    if (content.feature_surfaces?.includes("ui")) lines.push(`- **Browser E2E:** ${content.browser_e2e_required === true ? "required" : "MISSING"} via ${content.browser_e2e_tool || "_unset tool_"}`);
     const deps = listish(content.dependency_story_ids);
     lines.push(`- **Depends on:** ${deps.length ? deps.map((id) => `\`${id}\``).join(", ") : "_none_"}`);
     const scope = listish(content.allowed_change_scope);
@@ -296,6 +343,16 @@ function renderG4Session({ packs, ready }) {
     lines.push("");
   }
 
+  lines.push("### Requirements-to-test traceability", "");
+  if (!traceability.length) lines.push("_No traceability artifact._", "");
+  for (const { record, content } of traceability) {
+    lines.push(`#### ${record.id}`, "");
+    for (const link of listish(content?.links)) {
+      lines.push(`- ${link.requirement_id || "?"} -> ${link.story_id || "?"} -> ${link.acceptance_criterion_id || "?"} -> ${link.test_case_id || "?"} -> ${link.verification_check_id || link.manual_evidence_id || link.disposition || "?"}`);
+    }
+    lines.push("");
+  }
+
   lines.push(
     "### Human checklist before approve",
     "",
@@ -303,6 +360,7 @@ function renderG4Session({ packs, ready }) {
     "- [ ] `reuse-existing` / `extract-shared` contracts name real reuse targets.",
     "- [ ] Allowed change scope is narrow enough to block drive-by rewrites.",
     "- [ ] Required sensors include project-relevant checks (e.g. boundaries, file-size).",
+    "- [ ] Every source requirement and AC has an explicit automated, manual, or approved-exclusion verification disposition.",
     "",
   );
   return `${lines.join("\n")}\n`;
@@ -399,10 +457,10 @@ function renderB2Session({ packs, ready }) {
  * @param {string} gate
  * @param {{ bodies: Array, ready: boolean }} input
  */
-function renderGateSession(gate, { bodies = [], ready = false } = {}) {
+function renderGateSession(gate, { bodies = [], ready = false, analysis = null } = {}) {
   const packs = packagesFromBodies(bodies);
   if (gate === "G0") return renderG0Session({ packs, ready });
-  if (gate === "G1") return renderG1Session({ packs, ready });
+  if (gate === "G1") return renderG1Session({ packs, ready, analysis });
   if (gate === "G2") return renderG2Session({ packs, ready });
   if (gate === "G3") {
     const { design, architecture } = extractG3Bodies(bodies);
@@ -431,7 +489,7 @@ function approveHeading(gate) {
 function approveIntro(gate) {
   const labels = {
     G0: "If the interpretation session above is acceptable, freeze source + interpretation:",
-    G1: "If the story breakdown above is acceptable, freeze epics/stories/dependencies:",
+    G1: "If the story breakdown above is acceptable, freeze epics/stories/dependencies/allocations:",
     G2: "If the test strategy above is acceptable, freeze test plans/cases/data:",
     G3: "If the design session above is acceptable, freeze design + architecture:",
     G4: "If the story contracts above are acceptable, freeze plans and enter the ratchet:",

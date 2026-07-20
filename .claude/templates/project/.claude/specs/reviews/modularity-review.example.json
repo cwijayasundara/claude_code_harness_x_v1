@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "review_id": "modularity-review-1",
+  "reviewer_id": "independent-reviewer-1",
+  "independent_context_id": "fresh-context-1",
+  "packet_id": "replace-from-review-packet",
+  "workspace_sha256": "replace-from-review-packet",
+  "findings": [
+    {
+      "category": "semantic-duplication",
+      "severity": "high",
+      "affected_paths": ["src/example-a.ts", "src/example-b.ts"],
+      "evidence": ["Both paths independently implement the same request normalization and failure mapping."],
+      "design_options": ["Reuse the existing canonical implementation.", "Extract a shared policy only if both uses must evolve together."],
+      "recommendation": "Prefer reuse; require human approval before extracting a new shared abstraction."
+    }
+  ]
+}

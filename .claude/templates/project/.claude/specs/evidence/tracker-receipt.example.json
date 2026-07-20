@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "projection_id": "CHANGE-123-generic-projection",
+  "projection_hash": "approved-projection-hash",
+  "provider": "generic",
+  "project_key": "PROJECT-KEY",
+  "generated_at": "2026-07-20T10:00:00.000Z",
+  "status": "success",
+  "results": [
+    {
+      "local_id": "STORY-1",
+      "local_hash": "approved-local-payload-hash",
+      "remote_id": "REMOTE-101",
+      "remote_url": "https://tracker.example/items/REMOTE-101",
+      "remote_snapshot_hash": "redacted-provider-response-hash",
+      "status": "success",
+      "operation": "create"
+    }
+  ]
+}

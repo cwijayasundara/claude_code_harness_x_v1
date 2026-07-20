@@ -49,10 +49,60 @@ unexplained commands.
 Built-in computational sensors always available from `harness-sensors.js`
 (**same set for vibe / outside-the-loop and `/harness` / on-the-loop**):
 secret-scan (built-in patterns plus Gitleaks), architecture-boundaries, **file-size**, **function-size**,
-**exception-handling**, **logging-discipline**, **performance-heuristics**, and
-**near-duplication** (thresholds in `.claude/project/maintainability.json`).
-Gitleaks unavailability is advisory in an interactive run and blocking under
-`harness-ci.js --all --fail-on-warn`. Active language and framework profiles
+**code-complexity**, **exception-handling**, **logging-discipline**,
+**performance-heuristics**, **near-duplication**, **dependency-cycles**, and
+**coupling-impact**. Maintainability thresholds live in
+`.claude/project/maintainability.json`; dependency graph thresholds live in
+`.claude/project/dependency-sensors.json`. Clone detection compares changed code
+against the eligible repository corpus. Complexity, cycle, and coupling
+heuristics begin advisory while precision is measured; project-owned native
+lint/import tools remain authoritative.
+
+Optional regression-effectiveness adapters read coverage and mutation JSON
+configured in `.claude/project/regression-sensors.json`. They are disabled by
+default because the harness cannot infer a repository's test runner or create
+honest baseline thresholds. Once enabled, their overall and changed-file
+metrics are persisted in the normalized report and sensor history.
+`harness-regression.js . --kind mutation --changed <path>` (or `coverage`,
+`property`, `fuzz`) executes only the explicit command/argument arrays in that
+configuration, without shell interpretation, then evaluates the resulting
+report. Test-integrity sensing remains fast and advisory by default.
+
+Risk-triggered semantic modularity review uses
+`.claude/project/modularity-review.json`. Run `harness-modularity.js .` to write
+a grounded packet, obtain the configured number of genuinely independent review
+documents, then rerun with one `--review <path>` per document. The deterministic
+merge escalates corroborated high or blocking findings. Accepted hubs and
+trade-offs live in expiring `.claude/project/modularity-decisions.json`; material
+architecture changes remain human-approved.
+
+Prefer the native `harness-modularity-review` workflow: it prepares the packet,
+invokes two strong evaluators in isolated contexts, and merges their exact JSON.
+P4 operational budgets live in `.claude/project/sensor-operations.json`.
+`harness-ci.js` runs a deliberate bad-code canary and then verifies fresh sensor
+evidence plus the hash-chained metric history. `harness-status.js` exposes stale
+completion evidence and watcher running/stale/crashed state.
+
+Run `harness-operations-evidence.js status --root .` for flakiness, production
+SLO, watcher, and integrity posture. `compact` archives retained history;
+`attest --private-key <path>` signs current evidence with an externally managed
+Ed25519 key; `record-production --file <json>` records immutable operational
+feedback. Set `attestation.required_in_ci` only after configuring its public key
+and the CI-only `HARNESS_EVIDENCE_PRIVATE_KEY_PATH`. Run
+`harness-git-hooks.js status --root .` before explicitly choosing `install`;
+installation never overwrites an unrelated Git hook.
+
+When the plugin is enabled, `hooks/hooks.json` automatically schedules
+changed-path sensors after Claude Code file edits. Claude cannot complete the
+main turn, mark a task complete, or stop the harness generator while blocking
+sensor evidence is missing, stale, workspace-mismatched, or failing. The hook
+adapter returns exit code 2 and actionable findings. It is inert outside
+projects containing `.claude/harness.yaml`; the watcher remains useful for
+changes made by external editors.
+Gitleaks unavailability is a non-pass outcome with blocking disposition in
+interactive and CI runs. Sensor outcome is reported separately from policy:
+advisory maintainability warnings remain visible without blocking, while
+blocking controls must pass. Active language and framework profiles
 also run Semgrep; the fail-closed pre-PR `security` command should combine
 Gitleaks history scanning, Semgrep, dependency audit, and any applicable
 container or infrastructure scanner.

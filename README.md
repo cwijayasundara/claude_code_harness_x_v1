@@ -31,11 +31,11 @@ validation, sensors, upgrades, and release checks.
 Greenfield work:
 
 ```text
-G0 source and interpretation
- -> G1 epics, stories, dependencies
+G0 source, SPDD analysis, REASONS Canvas / direct-BRD interpretation
+ -> G1 epics, estimated stories, dependency DAG, critical path, allocation clusters
  -> G2 test strategy, cases, data
  -> G3 architecture, design, performance budgets
- -> G4 executable story contracts
+ -> G4 executable story contracts + requirements/test traceability
  -> story ratchet
  -> pre-PR verification
  -> independent branch review
@@ -131,8 +131,23 @@ scans. Static mapping has no source-file-count ceiling.
 
 Target specifications are separated under `.claude/specs/`: source, BRD/PRD,
 epics, stories, dependencies, test data/cases/plans, design, architecture,
-plans, evidence, reviews, brownfield analysis, and amendments. Mutable ratchet
+plans, optional tracker projections, evidence, reviews, brownfield analysis, and amendments. Tracker
+exports require a separate human approval after G1; the harness performs no live
+provider write, and local specifications remain authoritative. Mutable ratchet
 and context state lives under `.claude/state/` and is never treated as evidence.
+
+Official Linear and Atlassian remote MCP endpoints and Microsoft's Azure DevOps
+MCP package can be added per project without credentials in source control:
+
+```sh
+node .claude/scripts/harness-tracker-mcp.js configure --provider linear --root .
+node .claude/scripts/harness-tracker-mcp.js configure --provider jira --root .
+node .claude/scripts/harness-tracker-mcp.js configure --provider azure-devops --azure-org YOUR-ORG --root .
+```
+
+Configuration and OAuth do not authorize publication. The tracker publication
+skill requires an approved projection, a second explicit confirmation of the
+remote mutation plan, idempotent reconciliation, and an immutable receipt.
 
 ## Verification and release
 
@@ -157,5 +172,11 @@ human can authorize rollout. Prefer subtraction via `/harness-retro` when
 controls stop paying rent.
 
 See [the improvement plan](.claude/docs/v1-improvement-plan.md),
+[production sensor-system design](.claude/docs/production-sensor-system.md),
 [operating model](.claude/docs/harness-operating-model.md), and
 [release guide](.claude/docs/release.md).
+
+Production sensors are activated through plugin-level Claude Code hooks:
+file-edit events schedule debounced checks, while Stop, TaskCompleted, and the
+generator's SubagentStop fail closed on missing, stale, or blocking evidence.
+Scripts stored under `.claude/scripts` are not considered active by themselves.

@@ -1,0 +1,25 @@
+{
+  "id": "CHANGE-001-brd",
+  "package": "brd",
+  "change_id": "CHANGE-001",
+  "source_ids": ["CHANGE-001-source"],
+  "source_locations": ["requirements/change-brd.md"],
+  "derived_from": [],
+  "status": "draft",
+  "assumptions": [],
+  "open_questions": [],
+  "human_approver": null,
+  "approved_at": null,
+  "content": {
+    "intake_path": "brd-direct",
+    "direct_brd_rationale": "The supplied BRD already contains sufficient governed business and delivery context.",
+    "sufficiency_checks": [
+      "Business outcomes, actors, scope, rules, constraints, and definition of done are explicit",
+      "Ambiguities and contradictions are recorded as open questions"
+    ],
+    "summary": "Replace with the normalized BRD interpretation",
+    "outcomes": ["Replace with observable business outcomes"],
+    "in_scope": [],
+    "out_of_scope": []
+  }
+}

@@ -8,6 +8,10 @@ const {
   validateVerificationPlan,
 } = require("./verification-plan");
 const { redactEvidence } = require("./evidence-hygiene");
+const { buildReviewPacket } = require("./modularity-review");
+const { assertEvidenceFresh } = require("./sensor-operations");
+const { workspaceFingerprint } = require("./sensor-scope");
+const { reconcileTraceability } = require("./requirements-traceability");
 
 function projectFile(root, candidate, label) {
   const absolute = path.resolve(root, candidate);
@@ -158,10 +162,21 @@ function finalizeBranch(root, { changeId, reportFile, reviewFile }) {
   if (report.change_id !== changeId || report.cadence !== "pre-pr" || report.branch !== branch || report.status !== "pass") {
     throw new Error("Branch finalization requires the current branch's passing pre-pr report.");
   }
+  assertEvidenceFresh(projectRoot, report, "pre_pr");
   if (review.verdict !== "pass" || !Array.isArray(review.blocking_findings) || review.blocking_findings.length || !Array.isArray(review.required_human_decisions) || review.required_human_decisions.length) {
     throw new Error("Branch finalization requires a passing independent branch review with no blockers or human decisions.");
   }
   if (fs.statSync(reviewSource.absolute).mtimeMs + 1000 < Date.parse(report.generated_at)) throw new Error("Independent branch review predates the pre-pr report.");
+  const modularityPacket = buildReviewPacket(projectRoot, report.changed_paths || []);
+  let modularityReview = null;
+  if (modularityPacket.required) {
+    const modularityPath = path.join(projectRoot, ".claude", "specs", "evidence", "runtime", "modularity", "merged-review.json");
+    if (!fs.existsSync(modularityPath)) throw new Error("Risk triggers require a merged independent modularity review before branch finalization.");
+    modularityReview = JSON.parse(fs.readFileSync(modularityPath, "utf8"));
+    if (modularityReview.packet_id !== modularityPacket.packet_id || modularityReview.workspace?.sha256 !== workspaceFingerprint(projectRoot).sha256) throw new Error("Merged modularity review is stale for the current workspace.");
+    if (modularityReview.status === "human-decision-required") throw new Error("Merged modularity review has unresolved findings requiring a human decision.");
+    if ((modularityReview.independent_review_count || 0) < modularityPacket.minimum_independent_reviews) throw new Error("Merged modularity review lacks the required independent review count.");
+  }
   const index = JSON.parse(fs.readFileSync(path.join(projectRoot, ".claude", "specs", "index.json"), "utf8"));
   const stories = index.artifacts.filter((item) => item.change_id === changeId && item.package === "stories" && item.status === "approved");
   if (!stories.length) throw new Error(`Change '${changeId}' has no approved stories.`);
@@ -169,11 +184,14 @@ function finalizeBranch(root, { changeId, reportFile, reviewFile }) {
     const stateFile = path.join(projectRoot, ".claude", "state", "stories", `${story.id}.json`);
     if (!fs.existsSync(stateFile) || JSON.parse(fs.readFileSync(stateFile, "utf8")).state !== "STORY_VERIFIED") throw new Error(`Story '${story.id}' is not STORY_VERIFIED.`);
   }
+  const traceability = reconcileTraceability(projectRoot, index, changeId, report);
   const evidence = {
     schema_version: 1, change_id: changeId, branch, generated_at: new Date().toISOString(), status: "ready-for-draft-pr",
     source_ids: index.changes?.[changeId]?.source_ids || [], story_ids: stories.map((story) => story.id), changed_paths: report.changed_paths,
     pre_pr_report: reportSource.relative, branch_review: reviewSource.relative,
     performance: report.performance, residual_risks: review.non_blocking_findings || [],
+    modularity_review: modularityReview ? path.relative(projectRoot, path.join(projectRoot, ".claude", "specs", "evidence", "runtime", "modularity", "merged-review.json")) : null,
+    traceability,
   };
   const output = path.join(projectRoot, ".claude", "specs", "evidence", `${changeId}-branch-readiness.json`);
   fs.writeFileSync(output, `${JSON.stringify(evidence, null, 2)}\n`, "utf8");

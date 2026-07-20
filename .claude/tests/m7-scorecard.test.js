@@ -33,6 +33,11 @@ function pilot(id, scenarioType, overrides = {}) {
     sensor_findings: 1,
     sensor_true_positives: 1,
     sensor_findings_corrected: 1,
+    modularity_reviews: 1,
+    modularity_findings: 1,
+    modularity_true_positives: 1,
+    modularity_useful_reviews: 1,
+    modularity_review_minutes: 3,
     provider_cost_usd: 1,
     graph_queries: 2,
     graph_useful_results: 2,
@@ -76,6 +81,8 @@ test("m7 scorecard becomes eligible only after matched pilots and still human-ow
       minimum_sensor_correction_rate: 0.9,
       maximum_mean_provider_cost_per_accepted_story_usd: 5,
       minimum_brownfield_graph_useful_rate: 0.6,
+      minimum_modularity_review_precision: 0.7,
+      minimum_modularity_review_value_rate: 0.5,
     },
   }));
   fs.writeFileSync(path.join(root, "evidence.json"), "{}\n");

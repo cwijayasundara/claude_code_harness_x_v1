@@ -1,0 +1,27 @@
+{
+  "id": "CHANGE-001-allocations",
+  "package": "allocations",
+  "change_id": "CHANGE-001",
+  "source_ids": ["CHANGE-001-source"],
+  "source_locations": ["requirements/change-prd.md"],
+  "derived_from": ["CHANGE-001-dependencies"],
+  "status": "draft",
+  "assumptions": [],
+  "open_questions": [],
+  "human_approver": null,
+  "approved_at": null,
+  "content": {
+    "clusters": [
+      {
+        "id": "feature-foundation",
+        "story_ids": ["CHANGE-001-story-001", "CHANGE-001-story-002"],
+        "total_points": 8,
+        "depends_on_clusters": [],
+        "shared_seams": ["src/feature"],
+        "required_skills": ["Replace with project skills"],
+        "rationale": "Keep dependent stories sharing the same seam with one engineer",
+        "assignee": null
+      }
+    ]
+  }
+}

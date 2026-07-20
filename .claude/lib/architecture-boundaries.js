@@ -1,5 +1,6 @@
 const fs = require("node:fs");
 const path = require("node:path");
+const { resolveInspectionPaths } = require("./sensor-scope");
 
 function loadBoundaryRules(root) {
   const filePath = path.join(root, ".claude", "project", "boundaries.json");
@@ -28,9 +29,10 @@ function importsIn(source) {
 
 function checkBoundaries(root, changedPaths) {
   const { rules } = loadBoundaryRules(root);
+  const inspectionPaths = resolveInspectionPaths(root, changedPaths);
   const violations = [];
   for (const rule of rules) {
-    for (const changedPath of changedPaths) {
+    for (const changedPath of inspectionPaths) {
       if (!changedPath.startsWith(rule.from) || !rule.extensions.includes(path.extname(changedPath))) continue;
       const fullPath = path.join(root, changedPath);
       if (!fs.existsSync(fullPath)) continue;
@@ -40,7 +42,7 @@ function checkBoundaries(root, changedPaths) {
       }
     }
   }
-  return { rules, violations };
+  return { rules, violations, inspectedPaths: inspectionPaths };
 }
 
 module.exports = { loadBoundaryRules, checkBoundaries };

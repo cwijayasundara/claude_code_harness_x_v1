@@ -9,6 +9,8 @@
     "minimum_sensor_precision": 0.8,
     "minimum_sensor_correction_rate": 0.9,
     "maximum_mean_provider_cost_per_accepted_story_usd": 5,
-    "minimum_brownfield_graph_useful_rate": 0.6
+    "minimum_brownfield_graph_useful_rate": 0.6,
+    "minimum_modularity_review_precision": 0.7,
+    "minimum_modularity_review_value_rate": 0.5
   }
 }

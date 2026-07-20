@@ -33,6 +33,28 @@ test("G0 session narrates interpretation and checklist", () => {
   assert.match(md, /Human checklist before approve/);
 });
 
+test("G0 session renders SPDD analysis and every REASONS section", () => {
+  const md = renderGateSession("G0", {
+    ready: true,
+    bodies: [
+      body("analysis", {
+        domain_concepts: ["Todo"], strategic_direction: ["Reuse"],
+        risks: ["Drift"], requirement_gaps: ["None"],
+      }, "A1"),
+      body("reasons-canvas", {
+        requirements: ["R"], entities: ["E"], approach: ["A"], structure: ["S"],
+        operations: ["O"], norms: ["N"], safeguards: ["Safe"],
+        sync: { status: "aligned", amendment_ids: [] },
+      }, "RC1"),
+    ],
+  });
+  assert.match(md, /SPDD analysis/);
+  assert.match(md, /REASONS Canvas/);
+  for (const section of ["requirements", "entities", "approach", "structure", "operations", "norms", "safeguards", "sync"]) {
+    assert.match(md, new RegExp(section));
+  }
+});
+
 test("G1 session lists stories and dependency order", () => {
   const md = renderGateSession("G1", {
     ready: true,
@@ -40,18 +62,21 @@ test("G1 session lists stories and dependency order", () => {
       body("epics", { title: "Todos" }, "E1"),
       body("stories", {
         title: "Create todo",
+        size: "low", story_points: 2, estimate_confidence: "high", estimate_basis: ["small seam"],
         acceptance_criteria: ["returns id", "rejects empty"],
       }, "S1"),
       body("dependencies", {
-        sequence: ["S1", "S2"],
-        dag: [{ story_id: "S2", depends_on: ["S1"] }],
+        nodes: [{ story_id: "S1" }, { story_id: "S2" }],
+        edges: [{ from: "S1", to: "S2" }],
       }, "D1"),
+      body("allocations", { clusters: [{ id: "cluster", story_ids: ["S1", "S2"], total_points: 5, depends_on_clusters: [] }] }, "A1"),
     ],
+    analysis: { topological_order: ["S1", "S2"], dependency_ready_story_ids: ["S1"], critical_path: ["S1", "S2"], critical_path_points: 5 },
   });
   assert.match(md, /G1 stories/);
   assert.match(md, /Create todo/);
-  assert.match(md, /Sequence/);
-  assert.match(md, /S2.*depends on/s);
+  assert.match(md, /Critical path/);
+  assert.match(md, /Allocation clusters/);
 });
 
 test("G2 session summarizes plans and cases", () => {

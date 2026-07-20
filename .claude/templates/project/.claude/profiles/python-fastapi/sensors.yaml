@@ -9,6 +9,12 @@ sensors:
     command: pyright
     args: ["."]
     extensions: [".py"]
+  - id: python-architecture
+    label: Python import architecture
+    command: lint-imports
+    args: []
+    extensions: [".py"]
+    require_file: .importlinter
   - id: python-tests
     label: Python tests
     command: pytest

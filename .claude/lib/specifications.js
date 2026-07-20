@@ -3,6 +3,11 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 const { assertGateDesignEvolution } = require("./design-evolution");
+const { g0Requirements, validateG0Route, validateSpddArtifact } = require("./spdd-contract");
+const { validateG1, validateG4DependencyConsistency } = require("./backlog-planning");
+const { validateG4Traceability, validateTraceabilityArtifact } = require("./requirements-traceability");
+const { validateBrowserE2E } = require("./browser-e2e-contract");
+const { buildProjection, recordReceipt, validateProjection } = require("./tracker-projection");
 const {
   renderGateSession,
   appendixHeading,
@@ -11,17 +16,18 @@ const {
 } = require("./proposal-sessions");
 
 const PACKAGES = [
-  "source", "brd", "prd", "epics", "stories", "dependencies", "test-data",
+  "source", "brd", "prd", "analysis", "reasons-canvas", "prompt-amendments",
+  "epics", "stories", "dependencies", "allocations", "traceability", "tracker-projections", "test-data",
   "test-cases", "test-plans", "design", "architecture", "plans", "evidence",
   "reviews", "brownfield", "amendments",
 ];
 const GATES = ["G0", "G1", "G2", "G3", "G4", "B0", "B1", "B2"];
 const GATE_PACKAGES = {
   G0: ["source"],
-  G1: ["epics", "stories", "dependencies"],
+  G1: ["epics", "stories", "dependencies", "allocations"],
   G2: ["test-data", "test-cases", "test-plans"],
   G3: ["design", "architecture"],
-  G4: ["plans"],
+  G4: ["plans", "traceability"],
   B0: ["brownfield"],
   B1: ["brownfield"],
   B2: ["brownfield", "amendments"],
@@ -29,6 +35,7 @@ const GATE_PACKAGES = {
 const GATE_PREDECESSOR = { G1: "G0", G2: "G1", G3: "G2", G4: "G3", B1: "B0", B2: "B1" };
 const BROWNFIELD_TYPES = { B0: "baseline", B1: "code-map", B2: "change-strategy" };
 const PROTECTED_BRANCHES = new Set(["main", "master", "develop"]);
+const GREENFIELD_GATE_ORDER = Object.freeze(["G0", "G1", "G2", "G3", "G4"]);
 
 function sha256(buffer) {
   return crypto.createHash("sha256").update(buffer).digest("hex");
@@ -132,6 +139,16 @@ function register(root, inputFile) {
   for (const field of requiredArrays) if (!Array.isArray(artifact[field])) throw new Error(`${field} must be an array.`);
   if (artifact.source_ids.length === 0) throw new Error("source_ids must ground the artifact in at least one captured source.");
   if (!artifact.status || !["draft", "superseded"].includes(artifact.status)) throw new Error("registered artifact status must be draft or superseded; only a human gate can approve it.");
+  const spddErrors = validateSpddArtifact(artifact);
+  if (spddErrors.length) throw new Error(`SPDD artifact validation failed:\n- ${spddErrors.join("\n- ")}`);
+  if (artifact.package === "traceability") {
+    const traceErrors = validateTraceabilityArtifact(artifact.content);
+    if (traceErrors.length) throw new Error(`Traceability artifact validation failed:\n- ${traceErrors.join("\n- ")}`);
+  }
+  if (artifact.package === "tracker-projections") {
+    const projectionErrors = validateProjection(artifact.content);
+    if (projectionErrors.length) throw new Error(`Tracker projection validation failed:\n- ${projectionErrors.join("\n- ")}`);
+  }
   const { index, indexPath } = loadIndex(root);
   const change = index.changes[artifact.change_id];
   if (!change) throw new Error(`Unknown change '${artifact.change_id}'; intake its BRD/PRD first.`);
@@ -169,13 +186,29 @@ function approve(root, { changeId, gate, approver }) {
   if (predecessor && !change.gates[predecessor]) throw new Error(`${gate} requires approved ${predecessor}.`);
   const changeArtifacts = index.artifacts.filter((item) => item.change_id === changeId);
   const sourceKind = changeArtifacts.find((item) => item.package === "source")?.kind;
-  const requiredPackages = gate === "G0" ? ["source", sourceKind].filter(Boolean) : GATE_PACKAGES[gate];
+  const requiredPackages = gate === "G0" ? g0Requirements(sourceKind) : GATE_PACKAGES[gate];
   const requiredBrownfieldType = BROWNFIELD_TYPES[gate];
   const qualifies = (item, packageName) => item.package === packageName
     && item.status !== "superseded"
     && (packageName !== "brownfield" || !requiredBrownfieldType || (item.artifact_type || item.content?.artifact_type) === requiredBrownfieldType);
   const missingPackages = requiredPackages.filter((packageName) => !changeArtifacts.some((item) => qualifies(item, packageName)));
   if (missingPackages.length) throw new Error(`${gate} requires registered artifacts in: ${missingPackages.join(", ")}.`);
+  if (gate === "G0") {
+    const routeErrors = validateG0Route(changeArtifacts, (record) => readJson(path.join(path.resolve(root), record.path)));
+    if (routeErrors.length) throw new Error(`G0 SPDD checks failed:\n- ${routeErrors.join("\n- ")}`);
+  }
+  if (gate === "G1") {
+    const g1 = validateG1(changeArtifacts, (record) => readJson(path.join(path.resolve(root), record.path)));
+    if (g1.errors.length) throw new Error(`G1 backlog checks failed:\n- ${g1.errors.join("\n- ")}`);
+  }
+  if (gate === "G4") {
+    const dependencyErrors = validateG4DependencyConsistency(changeArtifacts, (record) => readJson(path.join(path.resolve(root), record.path)));
+    if (dependencyErrors.length) throw new Error(`G4 dependency checks failed:\n- ${dependencyErrors.join("\n- ")}`);
+    const traceability = validateG4Traceability(changeArtifacts, (record) => readJson(path.join(path.resolve(root), record.path)));
+    if (traceability.errors.length) throw new Error(`G4 traceability checks failed:\n- ${traceability.errors.join("\n- ")}`);
+    const browser = validateBrowserE2E(root, changeArtifacts, (record) => readJson(path.join(path.resolve(root), record.path)));
+    if (browser.errors.length) throw new Error(`G4 browser E2E checks failed:\n- ${browser.errors.join("\n- ")}`);
+  }
   const designEvolutionErrors = assertGateDesignEvolution(root, changeId, gate);
   if (designEvolutionErrors.length) {
     throw new Error(`${gate} design-evolution checks failed:\n- ${designEvolutionErrors.join("\n- ")}`);
@@ -192,8 +225,105 @@ function approve(root, { changeId, gate, approver }) {
     artifact.sha256 = sha256(fs.readFileSync(artifactPath));
   }
   change.gates[gate] = { status: "approved", approver: approver.trim(), approved_at: approvedAt };
+  if (gate === "G4") change.reapproval_required = false;
   writeJson(indexPath, index);
   return change.gates[gate];
+}
+
+function applyPromptAmendment(root, { changeId, amendmentId, approver }) {
+  assertId(changeId, "change id");
+  assertId(amendmentId, "amendment id");
+  if (!approver || !approver.trim()) throw new Error("approver is required.");
+  const branch = currentBranch(root);
+  const { index, indexPath } = loadIndex(root);
+  const change = index.changes[changeId];
+  if (!change) throw new Error(`Unknown change '${changeId}'.`);
+  if (change.branch !== branch) throw new Error(`Change '${changeId}' is bound to branch '${change.branch}', not '${branch}'.`);
+  if (!change.gates?.G0) throw new Error("Prompt amendment requires an already approved G0.");
+  const record = index.artifacts.find((item) => item.id === amendmentId && item.change_id === changeId && item.package === "prompt-amendments");
+  if (!record || record.status !== "draft") throw new Error(`Prompt amendment '${amendmentId}' must be a registered draft.`);
+  const file = path.join(path.resolve(root), record.path);
+  const artifact = readJson(file);
+  const errors = validateSpddArtifact(artifact);
+  if (errors.length) throw new Error(`SPDD artifact validation failed:\n- ${errors.join("\n- ")}`);
+  const content = artifact.content;
+  const superseded = content.supersedes_artifact_ids.map((id) => index.artifacts.find((item) => item.id === id && item.change_id === changeId));
+  if (superseded.some((item) => !item)) throw new Error("Prompt amendment references an unknown superseded artifact.");
+  const replacements = content.replacement_artifact_ids.map((id) => index.artifacts.find((item) => item.id === id && item.change_id === changeId));
+  if (replacements.some((item) => !item)) throw new Error("Prompt amendment references an unknown replacement artifact.");
+  if (replacements.some((item) => item.status !== "draft")) throw new Error("Prompt amendment replacements must be registered drafts awaiting gate reapproval.");
+  if (!replacements.some((item) => item.package === "reasons-canvas")) throw new Error("Prompt amendment must name a replacement reasons-canvas artifact.");
+
+  const approvedAt = new Date().toISOString();
+  for (const item of superseded) {
+    item.status = "superseded";
+    const storedPath = path.join(path.resolve(root), item.path);
+    const stored = readJson(storedPath);
+    writeJson(storedPath, { ...stored, status: "superseded", superseded_by: amendmentId });
+    item.sha256 = sha256(fs.readFileSync(storedPath));
+  }
+  artifact.status = "approved";
+  artifact.human_approver = approver.trim();
+  artifact.approved_at = approvedAt;
+  writeJson(file, artifact);
+  record.status = "approved";
+  record.human_approver = approver.trim();
+  record.approved_at = approvedAt;
+  record.sha256 = sha256(fs.readFileSync(file));
+
+  const earliest = Math.min(...content.affected_gates.map((gate) => GREENFIELD_GATE_ORDER.indexOf(gate)));
+  const reopened = GREENFIELD_GATE_ORDER.slice(earliest);
+  change.gate_history ||= [];
+  for (const gate of reopened) {
+    if (change.gates[gate]) change.gate_history.push({ gate, ...change.gates[gate], reopened_by: amendmentId, reopened_at: approvedAt });
+    delete change.gates[gate];
+  }
+  change.reapproval_required = true;
+  change.active_prompt_amendment_id = amendmentId;
+  writeJson(indexPath, index);
+  return { change_id: changeId, amendment_id: amendmentId, status: "approved", reopened_gates: reopened, reapproval_required: true };
+}
+
+function createTrackerProjection(root, { changeId, provider, projectKey }) {
+  currentBranch(root);
+  const artifact = buildProjection(root, { changeId, provider, projectKey });
+  const input = path.join(path.resolve(root), ".claude", "work", `${artifact.id}.json`);
+  writeJson(input, artifact);
+  return { artifact: register(root, path.relative(path.resolve(root), input)), input: path.relative(path.resolve(root), input) };
+}
+
+function approveTrackerProjection(root, { projectionId, approver }) {
+  assertId(projectionId, "projection id");
+  if (!approver || !approver.trim()) throw new Error("approver is required.");
+  currentBranch(root);
+  const { index, indexPath } = loadIndex(root);
+  const record = index.artifacts.find((item) => item.id === projectionId && item.package === "tracker-projections");
+  if (!record || record.status !== "draft") throw new Error(`Tracker projection '${projectionId}' must be a registered draft.`);
+  const file = path.join(path.resolve(root), record.path);
+  const artifact = readJson(file);
+  const errors = validateProjection(artifact.content);
+  if (errors.length) throw new Error(`Tracker projection validation failed:\n- ${errors.join("\n- ")}`);
+  const approvedAt = new Date().toISOString();
+  artifact.status = "approved";
+  artifact.human_approver = approver.trim();
+  artifact.approved_at = approvedAt;
+  writeJson(file, artifact);
+  record.status = "approved";
+  record.human_approver = approver.trim();
+  record.approved_at = approvedAt;
+  record.sha256 = sha256(fs.readFileSync(file));
+  writeJson(indexPath, index);
+  return { projection_id: projectionId, status: "approved", approver: approver.trim(), approved_at: approvedAt, live_push_authorized: false };
+}
+
+function recordTrackerReceipt(root, { receiptFile, receiptId }) {
+  currentBranch(root);
+  const projectRoot = path.resolve(root);
+  const candidate = path.resolve(projectRoot, receiptFile);
+  const relative = path.relative(projectRoot, candidate);
+  if (!relative || relative.startsWith("..") || path.isAbsolute(relative)) throw new Error("Receipt input must be inside the target project.");
+  if (!fs.existsSync(candidate) || !fs.statSync(candidate).isFile()) throw new Error(`Receipt file not found: ${receiptFile}`);
+  return recordReceipt(projectRoot, { receiptId, receipt: readJson(candidate) });
 }
 
 function validate(root, changeId) {
@@ -216,7 +346,7 @@ function validate(root, changeId) {
 }
 
 function requiredPackagesForGate(gate, sourceKind) {
-  if (gate === "G0") return ["source", sourceKind].filter(Boolean);
+  if (gate === "G0") return g0Requirements(sourceKind);
   return GATE_PACKAGES[gate] || [];
 }
 
@@ -312,8 +442,17 @@ function proposalPack(root, { changeId, gate, write = false }) {
   const sources = changeArtifacts.filter((item) => item.package === "source");
   const gateAlready = change.gates[gate] || null;
   const designEvolutionErrors = assertGateDesignEvolution(root, changeId, gate);
+  const spddErrors = gate === "G0"
+    ? validateG0Route(changeArtifacts, (record) => loadArtifactBody(root, record))
+    : [];
+  const g1Analysis = gate === "G1" ? validateG1(changeArtifacts, (record) => loadArtifactBody(root, record)) : null;
+  const g4DependencyErrors = gate === "G4" ? validateG4DependencyConsistency(changeArtifacts, (record) => loadArtifactBody(root, record)) : [];
+  const g4Traceability = gate === "G4" ? validateG4Traceability(changeArtifacts, (record) => loadArtifactBody(root, record)) : null;
+  const g4Browser = gate === "G4" ? validateBrowserE2E(root, changeArtifacts, (record) => loadArtifactBody(root, record)) : null;
   const packagesComplete = predecessorOk && missingPackages.length === 0 && ungrounded.length === 0
-    && designEvolutionErrors.length === 0;
+    && designEvolutionErrors.length === 0 && spddErrors.length === 0 && (!g1Analysis || g1Analysis.errors.length === 0)
+    && g4DependencyErrors.length === 0 && (!g4Traceability || g4Traceability.errors.length === 0)
+    && (!g4Browser || g4Browser.errors.length === 0);
   const ready = packagesComplete && !gateAlready;
 
   const blocking = [];
@@ -322,6 +461,11 @@ function proposalPack(root, { changeId, gate, write = false }) {
   if (missingPackages.length) blocking.push(`Missing packages: ${missingPackages.join(", ")}.`);
   if (ungrounded.length) blocking.push(`Ungrounded artifacts: ${ungrounded.join(", ")}.`);
   for (const error of designEvolutionErrors) blocking.push(error);
+  for (const error of spddErrors) blocking.push(error);
+  for (const error of g1Analysis?.errors || []) blocking.push(error);
+  for (const error of g4DependencyErrors) blocking.push(error);
+  for (const error of g4Traceability?.errors || []) blocking.push(error);
+  for (const error of g4Browser?.errors || []) blocking.push(error);
 
   const attention = [];
   if (openQuestions.length) {
@@ -367,7 +511,7 @@ function proposalPack(root, { changeId, gate, write = false }) {
     "",
   ];
 
-  const session = renderGateSession(gate, { bodies, ready });
+  const session = renderGateSession(gate, { bodies, ready, analysis: g1Analysis });
   if (session) lines.push(session.trimEnd(), "");
 
   lines.push(appendixHeading(gate));
@@ -426,6 +570,16 @@ function proposalPack(root, { changeId, gate, write = false }) {
     attention,
     missing_packages: missingPackages,
     design_evolution_errors: designEvolutionErrors,
+    spdd_errors: spddErrors,
+    g1_analysis: g1Analysis ? {
+      topological_order: g1Analysis.topological_order,
+      dependency_ready_story_ids: g1Analysis.dependency_ready_story_ids,
+      critical_path: g1Analysis.critical_path,
+      critical_path_points: g1Analysis.critical_path_points,
+    } : null,
+    g4_dependency_errors: g4DependencyErrors,
+    traceability_coverage: g4Traceability?.coverage || null,
+    browser_e2e: g4Browser ? { required_story_ids: g4Browser.required_story_ids, check_id: g4Browser.check_id } : null,
     assumptions,
     open_questions: openQuestions,
     artifact_ids: relevant.map((item) => item.id),
@@ -441,11 +595,15 @@ module.exports = {
   GATES,
   PACKAGES,
   GATE_PACKAGES,
+  applyPromptAmendment,
+  approveTrackerProjection,
   approve,
   currentBranch,
+  createTrackerProjection,
   initialize,
   intake,
   proposalPack,
+  recordTrackerReceipt,
   register,
   validate,
 };

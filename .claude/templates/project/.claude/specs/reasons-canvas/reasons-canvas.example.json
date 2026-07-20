@@ -1,0 +1,26 @@
+{
+  "id": "CHANGE-001-reasons",
+  "package": "reasons-canvas",
+  "change_id": "CHANGE-001",
+  "source_ids": ["CHANGE-001-source"],
+  "source_locations": ["requirements/change-prd.md"],
+  "derived_from": ["CHANGE-001-analysis"],
+  "status": "draft",
+  "assumptions": [],
+  "open_questions": [],
+  "human_approver": null,
+  "approved_at": null,
+  "content": {
+    "requirements": ["Problem, outcomes, actors, scope, and definition of done"],
+    "entities": ["Domain entities, relationships, vocabulary, and invariants"],
+    "approach": ["Strategy, alternatives, and trade-offs"],
+    "structure": ["System placement, components, boundaries, and dependencies"],
+    "operations": ["Ordered, concrete, testable delivery operations"],
+    "norms": ["Project conventions, quality, and observability expectations"],
+    "safeguards": ["Security, privacy, performance, and compatibility boundaries"],
+    "sync": {
+      "status": "aligned",
+      "amendment_ids": []
+    }
+  }
+}

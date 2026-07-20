@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "extensions": [".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts", ".py"],
+  "ignore_path_parts": ["test", "tests", "__tests__", "node_modules", "dist", "build", "vendor", "generated"],
+  "cycles": {
+    "severity": "warn",
+    "max_findings": 20
+  },
+  "coupling": {
+    "warn_fan_in": 8,
+    "warn_fan_out": 12,
+    "max_findings": 20
+  },
+  "approved_roots": [],
+  "suppressions": []
+}

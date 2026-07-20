@@ -1,0 +1,19 @@
+{
+  "feedback_id": "prod-001",
+  "change_id": "change-001",
+  "observed_at": "2026-07-20T12:00:00.000Z",
+  "owner": "service owner",
+  "type": "escaped-defect",
+  "summary": "A production behavior escaped the configured regression sensors.",
+  "measurements": {
+    "affected_requests": 1,
+    "time_to_detect_minutes": 10,
+    "delivered_changes": 10,
+    "false_greens": 1,
+    "sensor_expected_runs": 10,
+    "sensor_available_runs": 10
+  },
+  "evidence_refs": [
+    { "label": "incident", "path": ".claude/specs/evidence/incident-001.json" }
+  ]
+}

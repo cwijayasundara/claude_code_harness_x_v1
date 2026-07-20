@@ -1,0 +1,10 @@
+{
+  "id": "MANUAL-001",
+  "verified_by": "Human QA name",
+  "verified_at": "2026-07-20T12:00:00.000Z",
+  "result": "pass",
+  "notes": "Describe the observed result and approved journey.",
+  "workspace": {
+    "sha256": "replace-with-workspace-fingerprint"
+  }
+}

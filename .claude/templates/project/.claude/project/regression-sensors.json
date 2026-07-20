@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "coverage": {
+    "enabled": false,
+    "report_path": "coverage/coverage-summary.json",
+    "minimum_lines_pct": 80,
+    "minimum_branches_pct": 70,
+    "minimum_changed_lines_pct": 90,
+    "minimum_changed_branches_pct": 80,
+    "severity": "warn",
+    "command": null,
+    "args": [],
+    "changed_args": []
+  },
+  "mutation": {
+    "enabled": false,
+    "report_path": "reports/mutation/mutation.json",
+    "minimum_score_pct": 70,
+    "minimum_changed_score_pct": 80,
+    "maximum_changed_survivors": 0,
+    "maximum_changed_no_coverage": 0,
+    "severity": "warn",
+    "command": null,
+    "args": [],
+    "changed_args": ["--mutate", "{paths}"]
+  },
+  "test_integrity": {
+    "enabled": true,
+    "severity": "warn",
+    "test_path_pattern": "(^|/)(test|tests|__tests__|spec)(/|$)|[._-](test|spec)\\."
+  },
+  "property": {
+    "enabled": false,
+    "report_path": "reports/property.json",
+    "minimum_cases": 100,
+    "maximum_failures": 0,
+    "severity": "warn",
+    "command": null,
+    "args": [],
+    "changed_args": []
+  },
+  "fuzz": {
+    "enabled": false,
+    "report_path": "reports/fuzz.json",
+    "minimum_cases": 1000,
+    "maximum_failures": 0,
+    "severity": "warn",
+    "command": null,
+    "args": [],
+    "changed_args": []
+  }
+}

@@ -1,6 +1,6 @@
 # V1 improvement plan — minimal expert-generalist harness
 
-**Status:** living roadmap (revised 2026-07-19)
+**Status:** living roadmap (revised 2026-07-20)
 **Product:** Claude Code plugin under `.claude/`
 **Doctrine:** humans steer intent; agents execute approved slices; the harness is an outer control layer, not another coding agent.
 
@@ -14,6 +14,13 @@ Two truths drive the plan:
 2. **`claude_code_harness_x_v1` is the right reaction**, but it is not yet the finished product. The lean tree is ~146 files / ~4.6k JS LOC, three public delivery skills, three agents, one safety hook, and a deterministic contract spine. That spine is **mostly real**. The remaining risk is that we re-grow v5 by filling every conceptual box before real pilots prove value.
 
 This plan keeps the lean shape, hardens co-design and story execution, and forbids complexity that does not pay rent.
+
+The proposed post-v1 extension for governed PRD-to-SPDD intake, backlog
+estimation and clustering, requirements/test traceability, conditional browser
+E2E, optional tracker projection, and optional draft-PR publication is recorded
+in [the SDLC pipeline implementation plan](sdlc-pipeline-implementation-plan.md).
+Those phases are proposals, not approved scope; each must earn adoption through
+its own tests, control-budget review, and real-pilot decision.
 
 ---
 

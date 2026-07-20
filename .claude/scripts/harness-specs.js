@@ -11,6 +11,10 @@ function usage() {
     "  harness-specs.js register --file <artifact.json> [--root .]\n" +
     "  harness-specs.js proposal --change <id> --gate <G0..G4|B0..B2> [--write] [--root .]\n" +
     "  harness-specs.js approve --change <id> --gate <G0..G4|B0..B2> --approver <name> [--root .]\n" +
+    "  harness-specs.js amend --change <id> --amendment <artifact-id> --approver <name> [--root .]\n" +
+    "  harness-specs.js tracker-export --change <id> --provider <linear|jira|azure-devops|generic> --project <key> [--root .]\n" +
+    "  harness-specs.js tracker-approve --projection <artifact-id> --approver <name> [--root .]\n" +
+    "  harness-specs.js tracker-record --receipt <file> --id <receipt-id> [--root .]\n" +
     "  harness-specs.js validate [--change <id>] [--root .]\n"
   );
   process.exit(2);
@@ -54,6 +58,14 @@ try {
     }
   } else if (command === "approve" && values.change && values.gate && values.approver) {
     result = specs.approve(root, { changeId: values.change, gate: values.gate, approver: values.approver });
+  } else if (command === "amend" && values.change && values.amendment && values.approver) {
+    result = specs.applyPromptAmendment(root, { changeId: values.change, amendmentId: values.amendment, approver: values.approver });
+  } else if (command === "tracker-export" && values.change && values.provider && values.project) {
+    result = specs.createTrackerProjection(root, { changeId: values.change, provider: values.provider, projectKey: values.project });
+  } else if (command === "tracker-approve" && values.projection && values.approver) {
+    result = specs.approveTrackerProjection(root, { projectionId: values.projection, approver: values.approver });
+  } else if (command === "tracker-record" && values.receipt && values.id) {
+    result = specs.recordTrackerReceipt(root, { receiptFile: values.receipt, receiptId: values.id });
   } else if (command === "validate") {
     const errors = specs.validate(root, values.change);
     if (errors.length) throw new Error(errors.join("\n"));

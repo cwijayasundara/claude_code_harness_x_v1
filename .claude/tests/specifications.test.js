@@ -24,6 +24,28 @@ function registerDraft(root, artifact) {
   return specs.register(root, file);
 }
 
+function registerPrdSpdd(root, changeId) {
+  const sourceId = `${changeId}-source`;
+  const analysisId = `${changeId}-analysis`;
+  registerDraft(root, {
+    id: analysisId, package: "analysis", change_id: changeId, source_ids: [sourceId],
+    source_locations: ["prd.md"], derived_from: [`${changeId}-prd`], status: "draft",
+    assumptions: [], open_questions: [], content: {
+      domain_concepts: ["concept"], strategic_direction: ["direction"],
+      risks: ["risk"], requirement_gaps: ["none"],
+    },
+  });
+  registerDraft(root, {
+    id: `${changeId}-reasons`, package: "reasons-canvas", change_id: changeId, source_ids: [sourceId],
+    source_locations: ["prd.md"], derived_from: [analysisId], status: "draft",
+    assumptions: [], open_questions: [], content: {
+      requirements: ["requirement"], entities: ["entity"], approach: ["approach"],
+      structure: ["structure"], operations: ["operation"], norms: ["norm"],
+      safeguards: ["safeguard"], sync: { status: "aligned", amendment_ids: [] },
+    },
+  });
+}
+
 test("intake captures an immutable source and binds the change to the feature branch", () => {
   const root = project();
   fs.mkdirSync(path.join(root, "requirements"));
@@ -68,11 +90,89 @@ test("human gates are sequential and record the approver", () => {
   registerDraft(root, {
     id: "C-2-brd", package: "brd", change_id: "C-2", source_ids: ["C-2-source"],
     source_locations: ["brd.md"], derived_from: [], status: "draft", assumptions: [], open_questions: [],
+    content: { intake_path: "brd-direct", direct_brd_rationale: "Already sufficient", sufficiency_checks: ["Scope and outcomes are explicit"] },
   });
   const approval = specs.approve(root, { changeId: "C-2", gate: "G0", approver: "Alex" });
   assert.equal(approval.status, "approved");
   assert.equal(approval.approver, "Alex");
-  assert.throws(() => specs.approve(root, { changeId: "C-2", gate: "G1", approver: "Alex" }), /requires registered artifacts in: epics, stories, dependencies/);
+  assert.throws(() => specs.approve(root, { changeId: "C-2", gate: "G1", approver: "Alex" }), /requires registered artifacts in: epics, stories, dependencies, allocations/);
+});
+
+test("PRD G0 fails closed without SPDD and rejects a canvas not derived from analysis", () => {
+  const root = project();
+  fs.writeFileSync(path.join(root, "prd.md"), "# PRD\n");
+  specs.intake(root, { changeId: "C-SPDD", source: "prd.md", kind: "prd" });
+  registerDraft(root, {
+    id: "C-SPDD-prd", package: "prd", change_id: "C-SPDD", source_ids: ["C-SPDD-source"],
+    source_locations: ["prd.md"], derived_from: [], status: "draft", assumptions: [], open_questions: [],
+    content: { summary: "Grounded PRD" },
+  });
+  assert.throws(
+    () => specs.approve(root, { changeId: "C-SPDD", gate: "G0", approver: "Alex" }),
+    /analysis, reasons-canvas/
+  );
+
+  registerPrdSpdd(root, "C-SPDD");
+  const canvasPath = path.join(root, ".claude", "specs", "reasons-canvas", "C-SPDD-reasons.json");
+  const canvas = JSON.parse(fs.readFileSync(canvasPath, "utf8"));
+  canvas.derived_from = ["C-SPDD-prd"];
+  fs.writeFileSync(path.join(root, "wrong-canvas.json"), JSON.stringify({ ...canvas, status: "draft" }));
+  specs.register(root, "wrong-canvas.json");
+  const pack = specs.proposalPack(root, { changeId: "C-SPDD", gate: "G0" });
+  assert.equal(pack.ready, false);
+  assert.match(pack.blocking.join("\n"), /must derive from analysis/);
+  assert.throws(
+    () => specs.approve(root, { changeId: "C-SPDD", gate: "G0", approver: "Alex" }),
+    /must derive from analysis/
+  );
+});
+
+test("direct BRD G0 fails without an explicit reviewed sufficiency route", () => {
+  const root = project();
+  fs.writeFileSync(path.join(root, "brd.md"), "# BRD\n");
+  specs.intake(root, { changeId: "C-DIRECT", source: "brd.md", kind: "brd" });
+  registerDraft(root, {
+    id: "C-DIRECT-brd", package: "brd", change_id: "C-DIRECT", source_ids: ["C-DIRECT-source"],
+    source_locations: ["brd.md"], derived_from: [], status: "draft", assumptions: [], open_questions: [],
+    content: { summary: "Insufficient direct route" },
+  });
+  assert.throws(
+    () => specs.approve(root, { changeId: "C-DIRECT", gate: "G0", approver: "Alex" }),
+    /intake_path='brd-direct'/
+  );
+});
+
+test("approved prompt amendment supersedes intent and reopens downstream gates", () => {
+  const root = project();
+  fs.writeFileSync(path.join(root, "prd.md"), "# PRD\n");
+  specs.intake(root, { changeId: "C-AMEND", source: "prd.md", kind: "prd" });
+  registerDraft(root, {
+    id: "C-AMEND-prd", package: "prd", change_id: "C-AMEND", source_ids: ["C-AMEND-source"],
+    source_locations: ["prd.md"], derived_from: [], status: "draft", assumptions: [], open_questions: [], content: { summary: "v1" },
+  });
+  registerPrdSpdd(root, "C-AMEND");
+  specs.approve(root, { changeId: "C-AMEND", gate: "G0", approver: "Alex" });
+  registerDraft(root, {
+    id: "C-AMEND-reasons-v2", package: "reasons-canvas", change_id: "C-AMEND", source_ids: ["C-AMEND-source"],
+    source_locations: ["prd.md"], derived_from: ["C-AMEND-analysis"], status: "draft", assumptions: [], open_questions: [], content: {
+      requirements: ["corrected"], entities: ["entity"], approach: ["approach"], structure: ["structure"],
+      operations: ["operation"], norms: ["norm"], safeguards: ["safeguard"], sync: { status: "aligned", amendment_ids: ["C-AMEND-prompt-1"] },
+    },
+  });
+  registerDraft(root, {
+    id: "C-AMEND-prompt-1", package: "prompt-amendments", change_id: "C-AMEND", source_ids: ["C-AMEND-source"],
+    source_locations: ["prd.md"], derived_from: ["C-AMEND-reasons"], status: "draft", assumptions: [], open_questions: [], content: {
+      reason: "Correct business rule", affected_gates: ["G0"], supersedes_artifact_ids: ["C-AMEND-reasons"], replacement_artifact_ids: ["C-AMEND-reasons-v2"],
+    },
+  });
+  const result = specs.applyPromptAmendment(root, { changeId: "C-AMEND", amendmentId: "C-AMEND-prompt-1", approver: "Alex" });
+  assert.deepEqual(result.reopened_gates, ["G0", "G1", "G2", "G3", "G4"]);
+  const index = JSON.parse(fs.readFileSync(path.join(root, ".claude", "specs", "index.json"), "utf8"));
+  assert.equal(index.changes["C-AMEND"].reapproval_required, true);
+  assert.equal(index.changes["C-AMEND"].gates.G0, undefined);
+  assert.equal(index.artifacts.find((item) => item.id === "C-AMEND-reasons").status, "superseded");
+  assert.equal(specs.proposalPack(root, { changeId: "C-AMEND", gate: "G0" }).ready, true);
+  specs.approve(root, { changeId: "C-AMEND", gate: "G0", approver: "Alex" });
 });
 
 test("validation detects post-registration artifact drift", () => {
@@ -103,7 +203,7 @@ test("proposal pack renders a human-readable gate review and writes evidence whe
     status: "draft",
     assumptions: ["Users are authenticated externally."],
     open_questions: ["Should soft-delete be supported?"],
-    content: { summary: "Normalized BRD interpretation", outcomes: ["CRUD todos"] },
+    content: { intake_path: "brd-direct", direct_brd_rationale: "Already sufficient", sufficiency_checks: ["Scope and outcomes are explicit"], summary: "Normalized BRD interpretation", outcomes: ["CRUD todos"] },
   });
 
   const pack = specs.proposalPack(root, { changeId: "C-PROP", gate: "G0", write: true });
@@ -190,12 +290,17 @@ test("G3 proposal and approve require three structural alternatives and second-s
       {
         id: "C-G3-story-1", package: "stories", change_id: "C-G3", source_ids: ["C-G3-source"],
         source_locations: ["prd.md"], derived_from: ["C-G3-epic"], status: "draft", assumptions: [], open_questions: [],
-        content: { title: "S1" },
+        content: { title: "S1", acceptance_criteria: ["AC"], size: "low", story_points: 1, estimate_confidence: "high", estimate_basis: ["Small seam"] },
       },
       {
         id: "C-G3-deps", package: "dependencies", change_id: "C-G3", source_ids: ["C-G3-source"],
         source_locations: ["prd.md"], derived_from: ["C-G3-story-1"], status: "draft", assumptions: [], open_questions: [],
-        content: { sequence: ["C-G3-story-1"] },
+        content: { nodes: [{ story_id: "C-G3-story-1" }], edges: [] },
+      },
+      {
+        id: "C-G3-allocations", package: "allocations", change_id: "C-G3", source_ids: ["C-G3-source"],
+        source_locations: ["prd.md"], derived_from: ["C-G3-story-1", "C-G3-deps"], status: "draft", assumptions: [], open_questions: [],
+        content: { clusters: [{ id: "cluster-1", story_ids: ["C-G3-story-1"], total_points: 1, depends_on_clusters: [], shared_seams: ["src"], required_skills: ["coding"], rationale: "Cohesive slice" }] },
       },
     ]],
     ["G2", [
@@ -217,6 +322,7 @@ test("G3 proposal and approve require three structural alternatives and second-s
     ]],
   ]) {
     for (const draft of drafts) registerDraft(root, draft);
+    if (gate === "G0") registerPrdSpdd(root, "C-G3");
     specs.approve(root, { changeId: "C-G3", gate, approver: "Alex" });
   }
 

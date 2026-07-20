@@ -10,6 +10,7 @@ const { packContext } = require("../lib/context-budget");
 const { route } = require("../lib/routing-policy");
 const specs = require("../lib/specifications");
 const ratchet = require("../lib/story-ratchet");
+const { workspaceFingerprint } = require("../lib/sensor-scope");
 
 const pluginRoot = path.resolve(__dirname, "..");
 
@@ -65,6 +66,17 @@ function approveDesign(root, changeId, brownfield) {
   const sourceId = `${changeId}-source`;
   specs.intake(root, { changeId, source: "requirements.md", kind: "prd" });
   register(root, baseArtifact(changeId, sourceId, `${changeId}-prd`, "prd", { outcome: "Value becomes two" }));
+  const analysisId = `${changeId}-analysis`;
+  register(root, baseArtifact(changeId, sourceId, analysisId, "analysis", {
+    domain_concepts: ["value"], strategic_direction: ["Narrow behavior change"],
+    risks: ["Regression"], requirement_gaps: ["None in synthetic fixture"],
+  }, [`${changeId}-prd`]));
+  register(root, baseArtifact(changeId, sourceId, `${changeId}-reasons`, "reasons-canvas", {
+    requirements: ["Value becomes two"], entities: ["Value"], approach: ["Focused edit"],
+    structure: ["Existing function"], operations: ["Red, green, verify"],
+    norms: ["Small change"], safeguards: ["No unrelated edits"],
+    sync: { status: "aligned", amendment_ids: [] },
+  }, [analysisId]));
   specs.approve(root, { changeId, gate: "G0", approver: "Canary Human" });
   if (brownfield) {
     register(root, baseArtifact(changeId, sourceId, `${changeId}-baseline`, "brownfield", { artifact_type: "baseline", commands: [{ command: "synthetic baseline", exit_code: 0 }] }));
@@ -88,8 +100,14 @@ function approveDesign(root, changeId, brownfield) {
   }
   const storyId = `${changeId}-story`;
   register(root, baseArtifact(changeId, sourceId, `${changeId}-epic`, "epics", { title: "Value" }));
-  register(root, baseArtifact(changeId, sourceId, storyId, "stories", { title: "Return two" }));
-  register(root, baseArtifact(changeId, sourceId, `${changeId}-dependencies`, "dependencies", { edges: [] }));
+  register(root, baseArtifact(changeId, sourceId, storyId, "stories", {
+    title: "Return two", acceptance_criteria: ["value returns two"], size: "low", story_points: 1,
+    estimate_confidence: "high", estimate_basis: ["Single function behavior change"],
+  }));
+  register(root, baseArtifact(changeId, sourceId, `${changeId}-dependencies`, "dependencies", { nodes: [{ story_id: storyId }], edges: [] }));
+  register(root, baseArtifact(changeId, sourceId, `${changeId}-allocations`, "allocations", {
+    clusters: [{ id: "value-change", story_ids: [storyId], total_points: 1, depends_on_clusters: [], shared_seams: ["src/app.py"], required_skills: ["Python"], rationale: "One small vertical change." }],
+  }, [storyId, `${changeId}-dependencies`]));
   specs.approve(root, { changeId, gate: "G1", approver: "Canary Human" });
   register(root, baseArtifact(changeId, sourceId, `${changeId}-data`, "test-data", { fixtures: [] }));
   register(root, baseArtifact(changeId, sourceId, `${changeId}-case`, "test-cases", { expected: 2 }));
@@ -113,13 +131,19 @@ function approveDesign(root, changeId, brownfield) {
     evolutionary_rules: ["Second similar helper reuses or opens a design amendment."],
   }));
   specs.approve(root, { changeId, gate: "G3", approver: "Canary Human" });
-  register(root, baseArtifact(changeId, sourceId, `${changeId}-contract`, "plans", {
-    story_id: storyId, source_requirements: ["Value must become two"], approved_design_refs: [`${changeId}-design`], dependency_story_ids: [],
+  const contract = {
+    story_id: storyId, feature_surfaces: ["internal"], source_requirements: ["Value must become two"], approved_design_refs: [`${changeId}-design`], dependency_story_ids: [],
     allowed_change_scope: ["src", "tests"], acceptance_criteria: ["returns two"], test_case_ids: [`${changeId}-case`], test_data_ids: [`${changeId}-data`],
     required_sensors: ["unit"], performance_budgets: [], routing_risks: [], human_decisions: [],
     implementation_posture: brownfield ? "reuse-existing" : "first-slice",
     reuse_targets: brownfield ? [{ path: "src/app.py", symbol: "value" }] : [],
-  }, [storyId]));
+  };
+  register(root, baseArtifact(changeId, sourceId, `${changeId}-contract`, "plans", contract, [storyId]));
+  register(root, baseArtifact(changeId, sourceId, `${changeId}-traceability`, "traceability", { links: [{
+    requirement_id: "Value must become two", source_location: "requirements.md", story_id: storyId,
+    acceptance_criterion_id: "returns two", test_case_id: `${changeId}-case`, level: "unit",
+    disposition: "planned-automated", verification_check_id: "unit", risk_tags: [],
+  }] }, [`${changeId}-contract`, `${changeId}-case`]));
   specs.approve(root, { changeId, gate: "G4", approver: "Canary Human" });
   return { storyId, codeMap: brownfield ? JSON.parse(fs.readFileSync(path.join(root, ".claude", "specs", "brownfield", `${changeId}-code-map.json`))) : null };
 }
@@ -131,7 +155,13 @@ function executeStory(root, changeId, storyId) {
   fs.writeFileSync(path.join(root, "src", "app.py"), "def value(): return 2\n");
   ratchet.recordImplementation(root, storyId, writeJson(root, ".claude/specs/evidence/implementation.json", { command: "synthetic focused test", exit_code: 0, changed_paths: ["src/app.py"], test_paths: ["tests/test_app.py"] }));
   ratchet.recordReview(root, storyId, writeJson(root, ".claude/specs/reviews/story.json", { verdict: "pass", blocking_findings: [], non_blocking_findings: [], missing_or_stale_evidence: [], required_human_decisions: [], reviewed_paths: ["src/app.py", "tests/test_app.py"], evidence_refs: [".claude/specs/evidence/implementation.json"] }));
-  ratchet.recordSensors(root, storyId, writeJson(root, ".claude/specs/evidence/fast.json", { generated_at: new Date(Date.now() + 1000).toISOString(), status: "pass", sensors: [{ sensor_id: "unit", status: "pass" }] }));
+  ratchet.recordSensors(root, storyId, writeJson(root, ".claude/specs/evidence/fast.json", {
+    generated_at: new Date(Date.now() + 1000).toISOString(),
+    status: "pass",
+    blocking_status: "pass",
+    workspace: workspaceFingerprint(root),
+    sensors: [{ sensor_id: "unit", status: "pass" }],
+  }));
   ratchet.verify(root, storyId);
   verificationPlan(root, "hermetic-system");
   const injectedFailure = verifyBranch(root, { changeId, cadence: "pre-pr" }).report;
@@ -174,7 +204,7 @@ try {
     schema_version: 1, generated_at: new Date().toISOString(), measurement_type: "synthetic-deterministic-release-canary",
     status: scenarios.every((item) => item.status === "pass") ? "pass" : "fail", elapsed_ms: Date.now() - started, scenarios,
     controlled_measures: { first_pass_contract_acceptance: scenarios.filter((item) => item.status === "pass").length / scenarios.length, injected_sensor_detection_rate: scenarios.filter((item) => item.sensor_probe.injected_failure_detected).length / scenarios.length, sensor_correction_pass_rate: scenarios.filter((item) => item.sensor_probe.correction_passed).length / scenarios.length, repair_count: scenarios.reduce((sum, item) => sum + item.repair_count, 0), context_loaded_tokens: scenarios.reduce((sum, item) => sum + item.context_estimated_tokens, 0) },
-    real_pilot_measures_required: ["human_review_minutes", "escaped_defects", "sensor_precision_and_correction", "provider_cost_per_accepted_story", "production_graph_retrieval_value"],
+    real_pilot_measures_required: ["human_review_minutes", "escaped_defects", "sensor_precision_and_correction", "modularity_review_precision_and_value", "provider_cost_per_accepted_story", "production_graph_retrieval_value"],
     limitations: ["Synthetic canaries prove deterministic control integration, not model quality, human review time, provider cost, or production defect escape."],
   };
   const outputIndex = process.argv.indexOf("--output");

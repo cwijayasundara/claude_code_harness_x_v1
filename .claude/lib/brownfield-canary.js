@@ -7,6 +7,7 @@ const ratchet = require("./story-ratchet");
 const { buildCodeMap } = require("./brownfield-map");
 const { assertStrategyPrefersReuse, proposeChangeStrategy } = require("./brownfield-strategy");
 const { finalizeBranch, verifyBranch } = require("./branch-verification");
+const { workspaceFingerprint } = require("./sensor-scope");
 const {
   buildImplementationEvidence,
   buildRedEvidence,
@@ -51,6 +52,34 @@ function baseArtifact(changeId, sourceId, id, packageName, content, derivedFrom 
     approved_at: null,
     content,
   };
+}
+
+function registerSpdd(root, changeId, sourceId) {
+  const analysisId = `${changeId}-analysis`;
+  register(root, baseArtifact(changeId, sourceId, analysisId, "analysis", {
+    domain_concepts: ["todo", "title normalization"],
+    strategic_direction: ["Reuse the existing normalization seam."],
+    risks: ["Avoid changing the protected helper contract."],
+    requirement_gaps: ["No material gaps in the bounded canary."],
+  }, [`${changeId}-prd`]));
+  register(root, baseArtifact(changeId, sourceId, `${changeId}-reasons`, "reasons-canvas", {
+    requirements: ["Reuse normalizeTitle and assign stable todo ids."],
+    entities: ["Todo and normalized title."],
+    approach: ["Map the existing seam before a narrow change."],
+    structure: ["Retain current modules and dependency direction."],
+    operations: ["Characterize, test red, reuse, and regress."],
+    norms: ["Reuse before extraction or duplication."],
+    safeguards: ["Preserve protected interfaces and baseline behavior."],
+    sync: { status: "aligned", amendment_ids: [] },
+  }, [analysisId]));
+}
+
+function traceLinks(contract) {
+  return contract.source_requirements.flatMap((requirementId) => contract.acceptance_criteria.map((acceptanceCriterionId) => ({
+    requirement_id: requirementId, source_location: "requirements/change.md", story_id: contract.story_id,
+    acceptance_criterion_id: acceptanceCriterionId, test_case_id: contract.test_case_ids[0], level: "unit",
+    disposition: "planned-automated", verification_check_id: "unit-suite", risk_tags: ["brownfield-regression"],
+  })));
 }
 
 function proposalAndApprove(root, changeId, gate, approver) {
@@ -205,6 +234,7 @@ function runBrownfieldCanary(options = {}) {
     register(root, baseArtifact(changeId, sourceId, `${changeId}-prd`, "prd", {
       summary: "Reuse normalizeTitle inside createTodo and assign stable ids.",
     }));
+    registerSpdd(root, changeId, sourceId);
     proposalAndApprove(root, changeId, "G0", approver);
 
     // B0 baseline with real commands
@@ -301,15 +331,19 @@ function runBrownfieldCanary(options = {}) {
     register(root, baseArtifact(changeId, sourceId, `${changeId}-epic`, "epics", { title: "Reuse normalize in todos" }));
     register(root, baseArtifact(changeId, sourceId, storyId, "stories", {
       title: "createTodo reuses normalizeTitle",
+      size: "low", story_points: 3, estimate_confidence: "high",
+      estimate_basis: ["One existing seam, characterization coverage, and regression tests."],
       acceptance_criteria: [
         "createTodo uses normalizeTitle for title cleaning",
         "createTodo returns a non-legacy id",
       ],
     }, [`${changeId}-epic`]));
     register(root, baseArtifact(changeId, sourceId, `${changeId}-deps`, "dependencies", {
-      dag: [{ story_id: storyId, depends_on: [] }],
-      sequence: [storyId],
+      nodes: [{ story_id: storyId }], edges: [],
     }, [storyId]));
+    register(root, baseArtifact(changeId, sourceId, `${changeId}-allocations`, "allocations", {
+      clusters: [{ id: "normalize-reuse", story_ids: [storyId], total_points: 3, depends_on_clusters: [], shared_seams: ["src/normalize.js", "src/todo.js"], required_skills: ["JavaScript"], rationale: "One bounded brownfield reuse slice." }],
+    }, [storyId, `${changeId}-deps`]));
     proposalAndApprove(root, changeId, "G1", approver);
 
     register(root, baseArtifact(changeId, sourceId, `${changeId}-data`, "test-data", { fixtures: ["Buy milk", "  padded  "] }, [storyId]));
@@ -358,8 +392,9 @@ function runBrownfieldCanary(options = {}) {
     }, [`${changeId}-design`]));
     proposalAndApprove(root, changeId, "G3", approver);
 
-    register(root, baseArtifact(changeId, sourceId, `${changeId}-contract`, "plans", {
+    const contract = {
       story_id: storyId,
+      feature_surfaces: ["internal"],
       source_requirements: ["reuse normalizeTitle", "non-legacy id"],
       approved_design_refs: [`${changeId}-design`, `${changeId}-architecture`, `${changeId}-amendment`],
       dependency_story_ids: [],
@@ -376,7 +411,9 @@ function runBrownfieldCanary(options = {}) {
       human_decisions: [],
       implementation_posture: "reuse-existing",
       reuse_targets: [{ path: "src/normalize.js", symbol: "normalizeTitle" }],
-    }, [storyId, `${changeId}-design`]));
+    };
+    register(root, baseArtifact(changeId, sourceId, `${changeId}-contract`, "plans", contract, [storyId, `${changeId}-design`]));
+    register(root, baseArtifact(changeId, sourceId, `${changeId}-traceability`, "traceability", { links: traceLinks(contract) }, [`${changeId}-contract`, `${changeId}-case`]));
     proposalAndApprove(root, changeId, "G4", approver);
 
     git(root, ["add", "."]);
@@ -438,6 +475,8 @@ function runBrownfieldCanary(options = {}) {
     const sensorPath = writeJson(root, ".claude/specs/evidence/bf-sensors.json", {
       generated_at: new Date(Date.now() + 2000).toISOString(),
       status: "pass",
+      blocking_status: "pass",
+      workspace: workspaceFingerprint(root),
       sensors: [{ sensor_id: "unit", status: "pass", command: greenRun.command, exit_code: 0 }],
     });
     ratchet.recordSensors(root, storyId, sensorPath);

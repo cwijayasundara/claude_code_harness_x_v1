@@ -47,7 +47,16 @@ test("uses native plugin component discovery and routing policy", () => {
   assert.equal(fs.existsSync(path.join(root, "agents/harness-generator.md")), true);
   assert.equal(fs.existsSync(path.join(root, "agents/harness-evaluator.md")), true);
   assert.equal(fs.existsSync(path.join(root, "agents/harness-evaluator-fast.md")), true);
+  assert.equal(fs.existsSync(path.join(root, "skills/harness-modularity-review/SKILL.md")), true);
+  const modularitySkill = read("skills/harness-modularity-review/SKILL.md");
+  assert.match(modularitySkill, /second `harness-evaluator` in another fresh context/);
+  assert.match(modularitySkill, /Do not expose\n   the first review/);
   assert.equal(fs.existsSync(path.join(root, "hooks/pre-tool-safety.js")), true);
+  assert.equal(fs.existsSync(path.join(root, "hooks/hooks.json")), true);
+  assert.equal(fs.existsSync(path.join(root, "hooks/sensor-lifecycle.js")), true);
   assert.match(harnessSkill, /\$CLAUDE_PLUGIN_ROOT\/hooks\/pre-tool-safety\.js/);
+  assert.match(harnessSkill, /sensor-lifecycle\.js" post-tool/);
+  assert.match(harnessSkill, /sensor-lifecycle\.js" gate completion/);
+  assert.match(harnessSkill, /Invoking `\/harness` activates the production sensor lifecycle/);
   assert.match(template, /routing\.json/);
 });

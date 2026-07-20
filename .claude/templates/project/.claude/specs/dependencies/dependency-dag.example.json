@@ -1,0 +1,26 @@
+{
+  "id": "CHANGE-001-dependencies",
+  "package": "dependencies",
+  "change_id": "CHANGE-001",
+  "source_ids": ["CHANGE-001-source"],
+  "source_locations": ["requirements/change-prd.md"],
+  "derived_from": ["CHANGE-001-story-001", "CHANGE-001-story-002"],
+  "status": "draft",
+  "assumptions": [],
+  "open_questions": [],
+  "human_approver": null,
+  "approved_at": null,
+  "content": {
+    "nodes": [
+      { "story_id": "CHANGE-001-story-001" },
+      { "story_id": "CHANGE-001-story-002" }
+    ],
+    "edges": [
+      {
+        "from": "CHANGE-001-story-001",
+        "to": "CHANGE-001-story-002",
+        "rationale": "Story 002 reuses the seam delivered by Story 001"
+      }
+    ]
+  }
+}

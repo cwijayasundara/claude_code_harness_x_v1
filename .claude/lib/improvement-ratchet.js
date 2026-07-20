@@ -11,7 +11,8 @@ const CLASSIFICATIONS = new Set([
   "verification.missing-test", "verification.weak-oracle",
   "verification.sensor-false-positive", "verification.sensor-false-negative",
   "operations.escaped-defect", "operations.performance-regression",
-  "operations.user-journey-failure", "economics.excessive-cost",
+  "operations.user-journey-failure", "operations.security-incident",
+  "operations.false-green", "economics.excessive-cost",
 ]);
 const CANDIDATE_STATES = new Set([
   "OBSERVED", "CORROBORATED", "PROPOSED", "EXPERIMENT_APPROVED",

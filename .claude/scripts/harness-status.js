@@ -8,6 +8,8 @@ const { loadWaivers } = require("../lib/sensor-waivers");
 const { evaluatePilots } = require("../lib/pilot-evidence");
 const { learningStatus } = require("../lib/improvement-ratchet");
 const { feedbackProvenance } = require("../lib/story-ratchet");
+const { analyzeFlakiness, operationalStatus, watcherStatus } = require("../lib/sensor-operations");
+const { evaluateProductionSlos } = require("../lib/production-feedback");
 
 const argumentsParsed = process.argv.slice(2);
 const agentMode = argumentsParsed.includes("--agent");
@@ -31,15 +33,19 @@ function writeAgentSensorStatus(root, manifest) {
     return;
   }
   const report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
+  const operations = operationalStatus(root, "completion");
   const historyPath = path.join(evidenceDirectory, "sensor-history.jsonl");
   const history = fs.existsSync(historyPath)
     ? fs.readFileSync(historyPath, "utf8").split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line))
     : [];
   const controls = new Map(manifest.controls.map((control) => [control.id, control]));
   const actionable = (report.sensors || []).filter((result) => result.status !== "pass");
-  process.stdout.write(`SENSOR STATUS: ${report.status || "unknown"} (${report.generated_at || "unknown time"})\n`);
+  process.stdout.write(`SENSOR STATUS: ${report.status || "unknown"} (${report.generated_at || "unknown time"}); freshness ${operations.status}; history ${operations.history.valid ? "valid" : "invalid"}\n`);
+  if (operations.status !== "pass") {
+    process.stdout.write(`NEXT: Rerun sensors before completion: ${operations.reasons.join("; ")}\n`);
+  }
   if (actionable.length === 0) {
-    process.stdout.write("NEXT: No sensor correction required. Preserve this evidence for review.\n");
+    if (operations.status === "pass") process.stdout.write("NEXT: No sensor correction required. Preserve this evidence for review.\n");
     return;
   }
   for (const result of actionable) {
@@ -47,6 +53,7 @@ function writeAgentSensorStatus(root, manifest) {
     process.stdout.write(`\n${result.status.toUpperCase()} ${result.sensor_id || "unidentified-sensor"} [${trendFor(result, history)}]\n`);
     process.stdout.write(`PATHS: ${result.affected_paths.join(", ")}\n`);
     process.stdout.write(`WHY: ${result.reason}\n`);
+    if (result.metrics) process.stdout.write(`METRICS: ${JSON.stringify(result.metrics)}\n`);
     process.stdout.write(`NEXT: ${control?.self_correction || result.next_action}\n`);
   }
 }
@@ -135,6 +142,20 @@ try {
     const report = JSON.parse(fs.readFileSync(sensorReportPath, "utf8"));
     process.stdout.write(`- Latest sensors: ${report.status} (${report.generated_at || "unknown time"})\n`);
   } else process.stdout.write("- Latest sensors: not run\n");
+  const operations = operationalStatus(root, "completion");
+  process.stdout.write(`- Completion evidence: ${operations.status}; history chain: ${operations.history.valid ? "valid" : "invalid"}\n`);
+  for (const reason of operations.reasons) process.stdout.write(`  - ${reason}\n`);
+  const watcher = watcherStatus(root);
+  process.stdout.write(`- Sensor watcher: ${watcher.status} (${watcher.reason})\n`);
+  const flakiness = analyzeFlakiness(root);
+  process.stdout.write(`- Flaky sensor candidates: ${flakiness.quarantine_candidates.length}; quarantine authority: human\n`);
+  const production = evaluateProductionSlos(root);
+  process.stdout.write(`- Production SLOs: ${production.status}; feedback records: ${production.metrics.total}; authority: human\n`);
+  const modularityPath = path.join(evidenceDirectory, "modularity", "merged-review.json");
+  if (fs.existsSync(modularityPath)) {
+    const modularity = JSON.parse(fs.readFileSync(modularityPath, "utf8"));
+    process.stdout.write(`- Latest modularity review: ${modularity.status} (${modularity.independent_review_count || 0} independent review(s))\n`);
+  } else process.stdout.write("- Latest modularity review: not run\n");
   if (fs.existsSync(doctorPath)) {
     const doctor = JSON.parse(fs.readFileSync(doctorPath, "utf8"));
     process.stdout.write(`- Environment doctor: ${doctor.status}\n`);
