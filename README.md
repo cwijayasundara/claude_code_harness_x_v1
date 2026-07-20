@@ -9,11 +9,31 @@ The plugin is self-contained under `.claude/`. A target repository receives a
 short root `CLAUDE.md`; all harness configuration, specifications, state,
 profiles, and evidence remain under that target's `.claude/` directory.
 
-## Run locally
+## Install locally
+
+```sh
+claude plugin marketplace add /absolute/path/to/claude_code_harness_x_v1
+claude plugin install lean-expert-generalist-harness@lean-expert-generalist-harness-local
+```
+
+The install defaults to user scope, making the plugin available in every
+project. Use `--scope local` on both commands for a gitignored, project-specific
+installation. Restart Claude Code after installing. After editing or pulling
+changes into this checkout, refresh it with:
+
+```sh
+claude plugin marketplace update lean-expert-generalist-harness-local
+claude plugin update lean-expert-generalist-harness@lean-expert-generalist-harness-local
+```
+
+For one-session development without installing the plugin, use:
 
 ```sh
 claude --plugin-dir /absolute/path/to/claude_code_harness_x_v1/.claude
 ```
+
+`--plugin-dir` only loads a plugin for the process it starts. It does not create
+a persistent Claude Code plugin installation.
 
 The supported public surface is intentionally small:
 
@@ -82,7 +102,7 @@ PRD/BRD authority:
 git switch -c feature/example-change
 mkdir -p requirements
 # Write requirements/example-change.md before starting delivery.
-claude --plugin-dir "$CLAUDE_PLUGIN_ROOT"
+claude
 ```
 
 Start from whatever durable input you actually have:

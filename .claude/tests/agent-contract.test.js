@@ -60,3 +60,13 @@ test("uses native plugin component discovery and routing policy", () => {
   assert.match(harnessSkill, /Invoking `\/harness` activates the production sensor lifecycle/);
   assert.match(template, /routing\.json/);
 });
+
+test("repository exposes the plugin through a local marketplace", () => {
+  const marketplace = JSON.parse(read("../.claude-plugin/marketplace.json"));
+
+  assert.equal(marketplace.name, "lean-expert-generalist-harness-local");
+  assert.deepEqual(
+    marketplace.plugins.map(({ name, source }) => ({ name, source })),
+    [{ name: "lean-expert-generalist-harness", source: "./.claude" }],
+  );
+});

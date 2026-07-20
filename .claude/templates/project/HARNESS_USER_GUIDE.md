@@ -41,7 +41,7 @@ only profiles supported by the codebase.
 3. Start Claude Code with the plugin enabled:
 
    ```sh
-   claude --plugin-dir "$CLAUDE_PLUGIN_ROOT"
+   claude
    ```
 
 4. Start delivery in Claude Code:
