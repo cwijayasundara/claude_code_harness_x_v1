@@ -95,7 +95,7 @@ Keep the product ideas; do **not** rebuild Devin:
 | Browser / desktop E2E | Project-owned smoke journeys in `verification.json` (optional Playwright later) |
 | Pre-agreed test plan reduces drift | Gate G2 approved before coding |
 | **Fusion sidekick** | Sonnet generator + deterministic routing; strong Opus evaluator for risk/branch; no multi-model product fleet |
-| Status / watch / timeline | `/harness-status` only |
+| Status / watch / timeline | `/harness:status` only |
 
 Fusion insight to retain: **delegate bounded packets**, keep lead on plan/ambiguity/final review, measure **accepted story quality vs cost**, not $/token alone. A true parallel sidekick process is optional P6+ and must beat simple routing in pilots.
 
@@ -115,7 +115,7 @@ Official extension model ([features overview](https://code.claude.com/docs/en/fe
 | --- | --- | --- |
 | Always-on project map | Root `CLAUDE.md` + short target `CLAUDE.md` | ≤ ~80–120 lines; progressive disclosure only |
 | Path-scoped conventions | `.claude/rules/` or profile guides | Load by path/signal, not every session |
-| User-facing workflow | Skills with `disable-model-invocation: true` | Public: `/harness`, `/harness-status`, `/harness-retro` only |
+| User-facing workflow | Skills with `disable-model-invocation: true` | Public: `/harness`, `/harness:status`, `/harness:retro` only |
 | Internal procedure | Skills `user-invocable: false` or scripts | Co-design steps live *inside* `/harness`, not 20 slash commands |
 | Isolated implement | Subagent `harness-generator` (Sonnet) | Fresh context; no self-advance of ratchet |
 | Isolated validate | Subagent `harness-evaluator` (Opus, read-only) | Never sees generator narrative as authority |
@@ -373,7 +373,7 @@ Optional later: true Fusion-style parallel sidekick with separate cached context
 
 Humans approve: interpretation, stories/deps, tests/data, architecture/design, domain rules, security/privacy/migration/perf policy, model-cost policy, amendments.
 
-Agents: execute approved work, produce evidence, surface ambiguity, propose harness improvements via `/harness-retro`.
+Agents: execute approved work, produce evidence, surface ambiguity, propose harness improvements via `/harness:retro`.
 
 Harness improvement loop:
 
@@ -385,7 +385,7 @@ recurring failure
   → promote, tune, or remove
 ```
 
-**Control budget (anti-v5):** every new guide/sensor/skill/hook must either replace an existing control or carry a written `net_add_justification` in `harness-manifest.json`. `/harness-retro` may nominate zero-fire or high-noise controls for removal. No new public slash command without removing one or proving pilot demand.
+**Control budget (anti-v5):** every new guide/sensor/skill/hook must either replace an existing control or carry a written `net_add_justification` in `harness-manifest.json`. `/harness:retro` may nominate zero-fire or high-noise controls for removal. No new public slash command without removing one or proving pilot demand.
 
 ---
 
@@ -394,8 +394,8 @@ recurring failure
 | Command | Role |
 | --- | --- |
 | `/harness` | intake → co-design → ratchet → verify → draft PR readiness |
-| `/harness-status` | phase, approvals, story state, next action |
-| `/harness-retro` | harness improvement proposals (human-controlled) |
+| `/harness:status` | phase, approvals, story state, next action |
+| `/harness:retro` | harness improvement proposals (human-controlled) |
 
 `harness-operations` remains maintainer-only (init, validate, sensors, upgrade, release).
 
@@ -634,7 +634,7 @@ Brownfield inserts B0–B2 (and graph) **before** G1.
 | Decision | Choice |
 | --- | --- |
 | Spec location | `.claude/specs/<package>/` only (not repo-root `/specs`) |
-| Public surface | `/harness`, `/harness-status`, `/harness-retro` |
+| Public surface | `/harness`, `/harness:status`, `/harness:retro` |
 | Greenfield ceremony | Human-gated G0–G4 co-design before any coding |
 | Brownfield first step | Bounded code graph/map + reuse strategy (B0–B2) |
 | Coding unit | One story contract + TDD + independent validator |

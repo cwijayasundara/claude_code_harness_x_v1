@@ -5,7 +5,7 @@ function validateReleaseLayout(root) {
   const errors = [];
   if (path.basename(root) === ".claude") {
     const repositoryRoot = path.dirname(root);
-    const allowedRootEntries = new Set([".git", ".claude", ".vscode", "CLAUDE.md", "README.md", "design.html"]);
+    const allowedRootEntries = new Set([".git", ".claude", ".claude-plugin", ".vscode", "tests", "CLAUDE.md", "README.md", "design.html"]);
     for (const entry of fs.readdirSync(repositoryRoot)) if (!allowedRootEntries.has(entry)) errors.push(`Unexpected repository-root entry: ${entry}`);
   }
   const pluginPath = path.join(root, ".claude-plugin", "plugin.json");
@@ -24,13 +24,13 @@ function validateReleaseLayout(root) {
     errors.push("Plugin skills and agents must use native root directories, not manifest path registrations.");
   }
   for (const required of [
-    "skills/harness/SKILL.md",
+    "skills/run/SKILL.md",
     "skills/harness-context-selection/SKILL.md",
     "skills/harness-engineering-core/SKILL.md",
-    "skills/harness-operations/SKILL.md",
+    "skills/ops/SKILL.md",
     "skills/harness-modularity-review/SKILL.md",
-    "skills/harness-retro/SKILL.md",
-    "skills/harness-status/SKILL.md",
+    "skills/retro/SKILL.md",
+    "skills/status/SKILL.md",
     "agents/harness-generator.md",
     "agents/harness-evaluator.md",
     "agents/harness-evaluator-fast.md",

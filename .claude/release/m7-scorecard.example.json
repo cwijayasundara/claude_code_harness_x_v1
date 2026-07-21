@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-07-20T09:50:09.951Z",
+  "generated_at": "2026-07-21T05:09:00.783Z",
   "measurement_type": "m7-release-and-pilot-scorecard",
   "decision_authority": "human",
   "never_auto_merges": true,
@@ -39,7 +39,7 @@
   },
   "pilot": {
     "schema_version": 1,
-    "generated_at": "2026-07-20T09:50:09.951Z",
+    "generated_at": "2026-07-21T05:09:00.783Z",
     "status": "insufficient-evidence",
     "decision_authority": "human",
     "policy": {
@@ -154,8 +154,8 @@
   },
   "subtraction": {
     "schema_version": 1,
-    "generated_at": "2026-07-20T09:50:09.951Z",
-    "as_of": "2026-07-20T09:50:09.950Z",
+    "generated_at": "2026-07-21T05:09:00.783Z",
+    "as_of": "2026-07-21T05:09:00.782Z",
     "decision_authority": "human",
     "applies_automatically": false,
     "sensor_outcomes_available": false,
@@ -177,7 +177,7 @@
         "severity": "advisory",
         "reason": "No .claude/state/sensor-outcomes.jsonl yet; zero-fire retirement cannot be data-driven until outcomes are recorded.",
         "evidence": {
-          "ledger": "/var/folders/m_/tqtx1ykn03l97jvspxx7wc640000gn/T/harness-m7-release-Z7IyOr/.claude/state/sensor-outcomes.jsonl"
+          "ledger": "/var/folders/m_/tqtx1ykn03l97jvspxx7wc640000gn/T/harness-m7-release-r3ovQA/.claude/state/sensor-outcomes.jsonl"
         }
       }
     ],
@@ -194,7 +194,7 @@
   },
   "next_actions": [
     "Run real greenfield/brownfield pilots and record them with harness-pilot.js record.",
-    "Review subtraction proposals via /harness-retro; retire or justify each nominated control.",
+    "Review subtraction proposals via /harness:retro; retire or justify each nominated control.",
     "Keep release-check green (lived + brownfield + routing + P7 canaries)."
   ]
 }

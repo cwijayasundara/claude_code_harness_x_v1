@@ -33,7 +33,7 @@ if (commandAvailable("claude")) {
 } else {
   process.stdout.write("SKIP  Claude Code plugin validation (claude command unavailable)\n");
 }
-run("plugin test suite", process.execPath, ["--test", "tests/*.test.js"]);
+run("plugin test suite", process.execPath, ["--test", "tests/unit/*.test.js"], path.dirname(root));
 run("lived TDD story canary (G0-G4 + real tests)", process.execPath, ["scripts/harness-lived-canary.js"]);
 run("multi-story evolution canary (first-slice → reuse)", process.execPath, ["scripts/harness-multi-story-canary.js"]);
 run("lived brownfield reuse canary (B0-B2 + adapter)", process.execPath, ["scripts/harness-brownfield-canary.js"]);

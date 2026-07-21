@@ -586,7 +586,7 @@
           <thead><tr><th>Concern</th><th>Primitive</th><th>Lean rule</th></tr></thead>
           <tbody>
             <tr><td>Always-on map</td><td>Root <code>CLAUDE.md</code></td><td>≤ ~80–120 lines; progressive disclosure</td></tr>
-            <tr><td>User workflow</td><td>Skills</td><td>Public: <code>/harness</code>, <code>/harness-status</code>, <code>/harness-retro</code></td></tr>
+            <tr><td>User workflow</td><td>Skills</td><td>Public: <code>/harness</code>, <code>/harness:status</code>, <code>/harness:retro</code></td></tr>
             <tr><td>Implement</td><td>Subagent generator (Sonnet)</td><td>Fresh context; no self-advance</td></tr>
             <tr><td>Validate</td><td>Subagent evaluator (Opus)</td><td>Read-only; strong for risk/branch</td></tr>
             <tr><td>Hard enforcement</td><td>Hook</td><td>Destructive Git only (not 13 hooks/edit)</td></tr>
@@ -830,9 +830,9 @@
         <h2>13. Public surface</h2>
         <pre><code>claude --plugin-dir /absolute/path/to/claude_code_harness_x_v1/.claude
 
-/lean-expert-generalist-harness:harness "deliver requirements/change-prd.md"
-/lean-expert-generalist-harness:harness-status
-/lean-expert-generalist-harness:harness-retro</code></pre>
+/harness:run "deliver requirements/change-prd.md"
+/harness:status
+/harness:retro</code></pre>
         <p><code>harness-operations</code> is maintainer-facing: init, validate, sensors, upgrade, release.
         No dashboard, no scheduler, no 20 slash commands for pipeline steps.</p>
       </section>
@@ -953,7 +953,7 @@ node "$CLAUDE_PLUGIN_ROOT/scripts/harness-validate.js" /path/to/app</code></pre>
 
         <h2>Appendix C · Run &amp; prove</h2>
         <pre><code># Plugin tests
-node --test .claude/tests/*.test.js
+node --test tests/unit/*.test.js
 
 # Canaries
 node .claude/scripts/harness-lived-canary.js

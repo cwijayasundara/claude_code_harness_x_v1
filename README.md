@@ -13,7 +13,7 @@ profiles, and evidence remain under that target's `.claude/` directory.
 
 ```sh
 claude plugin marketplace add /absolute/path/to/claude_code_harness_x_v1
-claude plugin install lean-expert-generalist-harness@lean-expert-generalist-harness-local
+claude plugin install harness@harness-local
 ```
 
 The install defaults to user scope, making the plugin available in every
@@ -22,8 +22,8 @@ installation. Restart Claude Code after installing. After editing or pulling
 changes into this checkout, refresh it with:
 
 ```sh
-claude plugin marketplace update lean-expert-generalist-harness-local
-claude plugin update lean-expert-generalist-harness@lean-expert-generalist-harness-local
+claude plugin marketplace update harness-local
+claude plugin update harness@harness-local
 ```
 
 For one-session development without installing the plugin, use:
@@ -38,16 +38,16 @@ a persistent Claude Code plugin installation.
 The supported public surface is intentionally small:
 
 ```text
-/lean-expert-generalist-harness:harness "Deliver requirements/change-prd.md"
-/lean-expert-generalist-harness:harness-status
-/lean-expert-generalist-harness:harness-retro
+/harness:run "Deliver requirements/change-prd.md"
+/harness:status
+/harness:retro
 ```
 
-`/harness` is the single SDLC front door. It accepts an idea, PRD, BRD,
+`/harness:run` is the single SDLC front door. It accepts an idea, PRD, BRD,
 feature, epic, story, issue, design, tests, or existing diff; it can stop after
 an intermediate artifact or continue through verified draft-PR readiness.
 
-`harness-operations` remains an internal/maintainer entry point for setup,
+`/harness:ops` remains an internal/maintainer entry point for setup,
 validation, sensors, upgrades, and release checks.
 
 ## User guide: scaffold and use a repository
@@ -108,12 +108,12 @@ claude
 Start from whatever durable input you actually have:
 
 ```text
-/lean-expert-generalist-harness:harness "Deliver requirements/example-change.md"
-/lean-expert-generalist-harness:harness "Implement requirements/US-142.md"
-/lean-expert-generalist-harness:harness "Add invoice export"
-/lean-expert-generalist-harness:harness "Fix issue #381"
-/lean-expert-generalist-harness:harness "Design invoice export but do not write code"
-/lean-expert-generalist-harness:harness "Continue"
+/harness:run "Deliver requirements/example-change.md"
+/harness:run "Implement requirements/US-142.md"
+/harness:run "Add invoice export"
+/harness:run "Fix issue #381"
+/harness:run "Design invoice export but do not write code"
+/harness:run "Continue"
 ```
 
 The harness reports the inferred starting point, target, repository posture,
@@ -145,7 +145,7 @@ Internally, the harness proposes, but never self-approves, the specification gat
 
 After approval it executes one story at a time through a failing test,
 implementation, independent review, deterministic sensors, and verification.
-Use `/lean-expert-generalist-harness:harness-status` to see the current gate or
+Use `/harness:status` to see the current gate or
 story state, target, route, required human action, and recomputed next step. Use
 the full status view for detailed evidence and actionable failures. Humans
 retain product, material architecture, security/privacy, merge, and deployment
@@ -157,11 +157,11 @@ decisions.
 
 You do not need to choose a different command for requirements, design, tests,
 implementation, or an existing-code change. Describe the source and the outcome
-to `/harness`; it selects the smallest sufficient route and reports its choice
+to `/harness:run`; it selects the smallest sufficient route and reports its choice
 before writing delivery artifacts.
 
 ```text
-/lean-expert-generalist-harness:harness "<what you want delivered>"
+/harness:run "<what you want delivered>"
 ```
 
 The classification has five independent parts:
@@ -185,7 +185,7 @@ data/security handling, architecture, or test expectations.
 Use natural language when the work is still taking shape:
 
 ```text
-/lean-expert-generalist-harness:harness "Add invoice export for account administrators"
+/harness:run "Add invoice export for account administrators"
 ```
 
 The harness captures the exact request as a durable source, proposes a governing
@@ -197,7 +197,7 @@ feature, or a larger initiative. It does not invent a fictional PRD or BRD.
 Use a repository-owned file for product requirements:
 
 ```text
-/lean-expert-generalist-harness:harness "Deliver requirements/payments-prd.md"
+/harness:run "Deliver requirements/payments-prd.md"
 ```
 
 PRD intake preserves the immutable source, performs source-grounded SPDD
@@ -209,7 +209,7 @@ checkpoints. The original PRD remains authoritative.
 An already reviewed, sufficiently bounded BRD can enter directly:
 
 ```text
-/lean-expert-generalist-harness:harness "Deliver requirements/refunds-brd.md" --from brd
+/harness:run "Deliver requirements/refunds-brd.md" --from brd
 ```
 
 The product checkpoint makes the direct-BRD rationale and sufficiency checks
@@ -220,7 +220,7 @@ explicit. Ambiguous business requirements are not silently promoted.
 Use a feature or epic when the outcome is known but decomposition is not:
 
 ```text
-/lean-expert-generalist-harness:harness "Deliver the account notification-preferences feature"
+/harness:run "Deliver the account notification-preferences feature"
 ```
 
 The product checkpoint shows epics, INVEST-sized stories, estimates,
@@ -232,7 +232,7 @@ human decision; the harness does not assign engineers automatically.
 A bounded story can start close to implementation:
 
 ```text
-/lean-expert-generalist-harness:harness "Implement requirements/US-142.md" --from story
+/harness:run "Implement requirements/US-142.md" --from story
 ```
 
 The harness checks actor, observable outcome, acceptance criteria, scope,
@@ -244,7 +244,7 @@ review instead of rewriting it silently.
 #### Issue, bug, or defect
 
 ```text
-/lean-expert-generalist-harness:harness "Fix issue #381"
+/harness:run "Fix issue #381"
 ```
 
 The route begins with reproduction and expected behaviour, then creates a
@@ -257,7 +257,7 @@ not been reproduced.
 Use the re-entry route after exploratory or vibe coding:
 
 ```text
-/lean-expert-generalist-harness:harness "Bring the current diff into the harness and verify it" --from diff
+/harness:run "Bring the current diff into the harness and verify it" --from diff
 ```
 
 The harness runs sensors first, records the governing intent, examines the
@@ -270,10 +270,10 @@ Not every run needs to write code. State the stopping point naturally or use
 `--through`:
 
 ```text
-/lean-expert-generalist-harness:harness "Turn requirements/payments-prd.md into an approved backlog; do not code"
-/lean-expert-generalist-harness:harness "Design US-142 but do not implement it" --through design
-/lean-expert-generalist-harness:harness "Create traceable test cases for US-142" --through tests
-/lean-expert-generalist-harness:harness "Deliver US-142" --through draft-pr
+/harness:run "Turn requirements/payments-prd.md into an approved backlog; do not code"
+/harness:run "Design US-142 but do not implement it" --through design
+/harness:run "Create traceable test cases for US-142" --through tests
+/harness:run "Deliver US-142" --through draft-pr
 ```
 
 Supported targets are:
@@ -313,7 +313,7 @@ Use guided mode for unfamiliar domains, substantial ambiguity, or when the team
 wants to inspect each decision in detail:
 
 ```text
-/lean-expert-generalist-harness:harness "Deliver requirements/payments-prd.md" --mode guided
+/harness:run "Deliver requirements/payments-prd.md" --mode guided
 ```
 
 The harness presents the individual gate sessions and returns whenever a
@@ -326,7 +326,7 @@ Use unattended mode only after the solution and story contracts are already
 human-approved:
 
 ```text
-/lean-expert-generalist-harness:harness "Deliver approved story US-142" --mode unattended
+/harness:run "Deliver approved story US-142" --mode unattended
 ```
 
 Unattended means autonomous execution inside an approved envelope. It does not
@@ -358,7 +358,7 @@ amendment, supersedes affected artifacts, and reopens the relevant gates.
 Use the human-facing status command at any time:
 
 ```text
-/lean-expert-generalist-harness:harness-status
+/harness:status
 ```
 
 The default view shows:
@@ -379,13 +379,13 @@ node "$CLAUDE_PLUGIN_ROOT/scripts/harness-status.js" . --full
 Resume after compaction, a closed terminal, or a stopped session with:
 
 ```text
-/lean-expert-generalist-harness:harness "Continue"
+/harness:run "Continue"
 ```
 
 If several changes are active, identify one explicitly:
 
 ```text
-/lean-expert-generalist-harness:harness "Continue" --change PAYMENTS-EXPORT
+/harness:run "Continue" --change PAYMENTS-EXPORT
 ```
 
 Resume derives the next step from recorded gates, story ratchets, verification,
@@ -428,22 +428,22 @@ because the surface is security-sensitive.
 
 ```text
 # Small existing-system story
-/lean-expert-generalist-harness:harness "Implement requirements/US-142.md"
+/harness:run "Implement requirements/US-142.md"
 
 # Multi-story feature with normal checkpoints
-/lean-expert-generalist-harness:harness "Add account-level invoice exports"
+/harness:run "Add account-level invoice exports"
 
 # Full PRD but stop before implementation
-/lean-expert-generalist-harness:harness "Prepare requirements/payments-prd.md through tests; do not code"
+/harness:run "Prepare requirements/payments-prd.md through tests; do not code"
 
 # Existing-system refactor with no intended behaviour change
-/lean-expert-generalist-harness:harness "Refactor the invoice parser without changing behaviour"
+/harness:run "Refactor the invoice parser without changing behaviour"
 
 # Verify manually edited code
-/lean-expert-generalist-harness:harness "Govern and verify the current diff" --from diff
+/harness:run "Govern and verify the current diff" --from diff
 
 # Continue an interrupted delivery
-/lean-expert-generalist-harness:harness "Continue"
+/harness:run "Continue"
 ```
 
 ### Troubleshooting
@@ -487,7 +487,7 @@ node "$CLAUDE_PLUGIN_ROOT/scripts/harness-upgrade.js" --target . --apply
 Upgrade preview is read-only. Applying an upgrade adds missing scaffold files
 and merges supported baseline controls without overwriting project-owned policy
 or the customized `HARNESS_USER_GUIDE.md`. Use
-`/lean-expert-generalist-harness:harness-retro` to review repeated failures and
+`/harness:retro` to review repeated failures and
 propose the smallest useful guide, sensor, fixture, or control removal.
 
 ## Delivery model
@@ -596,11 +596,14 @@ reported unavailable until the current agent confirms a usable integration.
   hooks/                  # narrow destructive-Git protection
   scripts/                # deterministic internal capabilities
   lib/                    # dependency-free contracts
-  tests/                  # contract and negative-path tests
   templates/project/      # target scaffold
   docs/                   # operating model, implementation, release, roadmap
   release/                # synthetic matched release scorecard
 ```
+
+Repository-owned tests live outside the shipped plugin: `tests/unit/` contains
+the deterministic contract and negative-path suite, while `tests/e2e/` contains
+the opt-in full-SDLC fixture and runner.
 
 Target specifications are separated under `.claude/specs/`: source, BRD/PRD,
 epics, stories, dependencies, test data/cases/plans, design, architecture,
@@ -624,6 +627,17 @@ remote mutation plan, idempotent reconciliation, and an immutable receipt.
 
 ## Verification and release
 
+Run the deterministic suite with:
+
+```sh
+node --test tests/unit/*.test.js
+```
+
+For a manual-style black-box exercise of the full README journey—small PRD to a
+simulated draft PR, followed by a second feature to another simulated draft
+PR—use [`tests/e2e/`](tests/e2e/README.md). It invokes the real Claude CLI and is
+therefore opt-in and quota-consuming.
+
 Run the complete plugin release gate:
 
 ```sh
@@ -641,7 +655,7 @@ defects, provider cost, or real graph retrieval value.
 Real pilots close that gap without automating governance. Maintainers record
 hash-backed observations with `harness-pilot.js record`; the aggregate report is
 `insufficient-evidence`, `hold`, or `eligible-for-human-rollout-decision`. Only a
-human can authorize rollout. Prefer subtraction via `/harness-retro` when
+human can authorize rollout. Prefer subtraction via `/harness:retro` when
 controls stop paying rent.
 
 See [the improvement plan](.claude/docs/v1-improvement-plan.md),

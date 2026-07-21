@@ -43,7 +43,7 @@
     ],
     "SubagentStop": [
       {
-        "matcher": "^lean-expert-generalist-harness:harness-generator$",
+        "matcher": "^harness:harness-generator$",
         "hooks": [
           {
             "type": "command",

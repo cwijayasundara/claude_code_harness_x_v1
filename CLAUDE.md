@@ -9,18 +9,19 @@ knowledge in the target repository.
 - Read [README.md](README.md) for the supported workflow and public commands.
 - Read [.claude/docs/implementation.md](.claude/docs/implementation.md) before changing
   harness scripts or hooks.
-- Run the relevant Node test file(s) after a change; the full suite is
-  `node --test .claude/tests/*.test.js`.
+- Run the relevant Node test file(s) after a change; the full unit suite is
+  `node --test tests/unit/*.test.js`. The model-driven README journey is the
+  opt-in package under `tests/e2e/`.
 
 ## Navigate by task
 
 | If you are changing… | Read next |
 | --- | --- |
-| Harness delivery behavior | [.claude/skills/harness/SKILL.md](.claude/skills/harness/SKILL.md) |
+| Harness delivery behavior | [.claude/skills/run/SKILL.md](.claude/skills/run/SKILL.md) |
 | How task context is selected | [.claude/skills/harness-context-selection/SKILL.md](.claude/skills/harness-context-selection/SKILL.md) |
 | Generator or evaluator roles | [.claude/agents/](.claude/agents/) |
 | Improvement roadmap | [.claude/docs/v1-improvement-plan.md](.claude/docs/v1-improvement-plan.md) |
-| Artifact, sensor, or repair utilities | the matching `.claude/lib/` module and its test in `.claude/tests/` |
+| Artifact, sensor, or repair utilities | the matching `.claude/lib/` module and its test in `tests/unit/` |
 | Product architecture and improvement decisions | [.claude/docs/v1-improvement-plan.md](.claude/docs/v1-improvement-plan.md) and the relevant module/test |
 | What a target project receives | [.claude/templates/project/](.claude/templates/project/) |
 

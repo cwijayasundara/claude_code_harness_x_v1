@@ -44,7 +44,7 @@ security / data / public API / perf:
 ## 3. Start harness delivery
 
 ```text
-/lean-expert-generalist-harness:harness "graduate vibe spike: requirements/vibe-change.md"
+/harness:run "graduate vibe spike: requirements/vibe-change.md"
 ```
 
 Or:

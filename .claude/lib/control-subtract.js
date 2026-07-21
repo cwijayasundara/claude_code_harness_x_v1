@@ -1,6 +1,6 @@
 /**
  * Subtractive ratchet helpers: nominate controls for retirement/demotion.
- * Never applies changes — humans approve via /harness-retro or manual edit.
+ * Never applies changes — humans approve via /harness:retro or manual edit.
  */
 
 function parseDate(value) {

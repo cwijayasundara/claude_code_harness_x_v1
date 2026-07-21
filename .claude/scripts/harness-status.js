@@ -51,7 +51,7 @@ function compactWorkflowStatus(root) {
   process.stdout.write(`- Current checkpoint: ${work.current_checkpoint}\n\n`);
   process.stdout.write(`Next: ${work.next_action}\n`);
   process.stdout.write(`Human action: ${work.current_checkpoint === "delivery" ? "None unless the ratchet escalates a material decision." : `Review the ${work.current_checkpoint} checkpoint when its proposal is ready.`}\n`);
-  process.stdout.write("\nUse `/harness-status --full` for sensors, verification, routing, and operational health.\n");
+  process.stdout.write("\nUse `/harness:status --full` for sensors, verification, routing, and operational health.\n");
   return true;
 }
 

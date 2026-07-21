@@ -1,0 +1,14 @@
+{
+  "name": "harness-full-sdlc-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node run-full-sdlc.mjs",
+    "test:contract": "node --test runner.test.mjs",
+    "clean": "node clean.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

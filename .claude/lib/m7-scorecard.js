@@ -105,7 +105,7 @@ function buildNextActions(rollout, subtraction, harness) {
     actions.push("Human reviews pilot-readiness.json and decides expand / tune / stop.");
   }
   if (subtraction?.summary?.total > 0) {
-    actions.push("Review subtraction proposals via /harness-retro; retire or justify each nominated control.");
+    actions.push("Review subtraction proposals via /harness:retro; retire or justify each nominated control.");
   }
   if (harness.status !== "synthetic-controls-ready") {
     actions.push("Fix control_budget / harness-manifest so active controls stay within max_active.");

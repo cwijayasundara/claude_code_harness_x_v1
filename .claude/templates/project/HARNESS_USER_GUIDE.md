@@ -47,10 +47,10 @@ only profiles supported by the codebase.
 4. Start delivery in Claude Code:
 
    ```text
-   /lean-expert-generalist-harness:harness "Deliver requirements/change-name.md"
-   /lean-expert-generalist-harness:harness "Implement requirements/US-142.md"
-   /lean-expert-generalist-harness:harness "Add invoice export"
-   /lean-expert-generalist-harness:harness "Continue"
+   /harness:run "Deliver requirements/change-name.md"
+   /harness:run "Implement requirements/US-142.md"
+   /harness:run "Add invoice export"
+   /harness:run "Continue"
    ```
 
    The harness infers the entry kind, stopping point, repository posture,
@@ -73,7 +73,7 @@ only profiles supported by the codebase.
 7. Inspect progress at any time:
 
    ```text
-   /lean-expert-generalist-harness:harness-status
+   /harness:status
    ```
 
 8. When all stories and branch checks pass, review the draft-PR readiness
@@ -99,7 +99,7 @@ the cited implementation and tests; do not treat a generated map as complete.
 | Inspect concise agent status | `node "$CLAUDE_PLUGIN_ROOT/scripts/harness-status.js" . --agent` |
 | Preview an upgrade | `node "$CLAUDE_PLUGIN_ROOT/scripts/harness-upgrade.js" --target .` |
 | Apply an additive upgrade | `node "$CLAUDE_PLUGIN_ROOT/scripts/harness-upgrade.js" --target . --apply` |
-| Review recurring failures | `/lean-expert-generalist-harness:harness-retro` |
+| Review recurring failures | `/harness:retro` |
 
 ## Where information lives
 

@@ -9,9 +9,9 @@ current as behaviour changes; do not treat chat history as the specification.
 The public surface remains deliberately small:
 
 ```text
-/lean-expert-generalist-harness:harness [request]
-/lean-expert-generalist-harness:harness-status
-/lean-expert-generalist-harness:harness-retro
+/harness:run [request]
+/harness:status
+/harness:retro
 ```
 
 `/harness` accepts an idea, PRD, BRD, feature, epic, story, issue, design, test
@@ -145,8 +145,8 @@ full status view, and concise sensor correction remains available to agents.
 Record focused and full-suite commands and results here as implementation
 proceeds.
 
-- `node --test .claude/tests/work-intake.test.js .claude/tests/work-state.test.js .claude/tests/specifications.test.js` — 23 passed, 0 failed before status/checkpoint work.
-- `node --test .claude/tests/*.test.js` — 218 passed, 0 failed after intake, workflow state, resume, status, skill, and documentation work.
-- `node --test .claude/tests/specifications.test.js .claude/tests/work-intake.test.js .claude/tests/work-state.test.js .claude/tests/status-health.test.js` — 29 passed, 0 failed after combined checkpoint support.
-- `node --test .claude/tests/*.test.js` — final suite: 220 passed, 0 failed.
+- `node --test tests/unit/work-intake.test.js tests/unit/work-state.test.js tests/unit/specifications.test.js` — 23 passed, 0 failed before status/checkpoint work.
+- `node --test tests/unit/*.test.js` — 218 passed, 0 failed after intake, workflow state, resume, status, skill, and documentation work.
+- `node --test tests/unit/specifications.test.js tests/unit/work-intake.test.js tests/unit/work-state.test.js tests/unit/status-health.test.js` — 29 passed, 0 failed after combined checkpoint support.
+- `node --test tests/unit/*.test.js` — final suite: 220 passed, 0 failed.
 - `node .claude/scripts/harness-release-check.js .claude` — passed plugin validation, all 220 tests, lived TDD, multi-story evolution, brownfield reuse, routing/context, matched P7, M7 scorecard, and subtraction checks. The generated timestamp-only scorecard rewrite was intentionally discarded.

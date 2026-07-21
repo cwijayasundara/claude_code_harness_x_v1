@@ -1,12 +1,12 @@
 {
-  "name": "lean-expert-generalist-harness-local",
+  "name": "harness-local",
   "description": "Local marketplace for installing the Lean Expert-Generalist Harness plugin from this checkout.",
   "owner": {
     "name": "Harness team"
   },
   "plugins": [
     {
-      "name": "lean-expert-generalist-harness",
+      "name": "harness",
       "source": "./.claude",
       "description": "A lean, domain-aware delivery harness for Claude Code."
     }

@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "checks": [
+    { "id": "install-build", "label": "Package source parses", "cadence": "pre-pr", "kind": "install-build", "configured": true, "command": "node", "args": ["--check", "src/task-board.js"], "timeout_ms": 30000 },
+    { "id": "unit-suite", "label": "Complete unit suite", "cadence": "pre-pr", "kind": "unit", "configured": true, "command": "node", "args": ["scripts/check.mjs"], "timeout_ms": 30000, "hermetic": true, "boundary_ids": [] },
+    { "id": "integration-suite", "label": "Hermetic integration suite", "cadence": "pre-pr", "kind": "integration", "configured": true, "command": "node", "args": ["--test"], "timeout_ms": 30000, "hermetic": true, "boundary_ids": [] },
+    { "id": "system-regression", "label": "Hermetic system regression", "cadence": "pre-pr", "kind": "hermetic-system", "configured": true, "command": "node", "args": ["--test"], "timeout_ms": 30000, "hermetic": true, "boundary_ids": [] },
+    { "id": "local-smoke", "label": "Library public-seam smoke", "cadence": "pre-pr", "kind": "local-smoke", "configured": true, "command": "node", "args": ["scripts/smoke.mjs"], "timeout_ms": 30000, "hermetic": true, "boundary_ids": [], "public_seam": "task-board library API", "safe_local_config": "in-memory with no external boundaries", "journeys": [{ "id": "add-and-list", "type": "success" }, { "id": "invalid-input", "type": "failure" }] },
+    { "id": "lint", "label": "JavaScript syntax check", "cadence": "pre-pr", "kind": "lint", "configured": true, "command": "node", "args": ["--check", "src/task-board.js"], "timeout_ms": 30000 },
+    { "id": "type", "label": "JavaScript API syntax check", "cadence": "pre-pr", "kind": "type", "configured": true, "command": "node", "args": ["--check", "src/task-board.js"], "timeout_ms": 30000 },
+    { "id": "security", "label": "Dependency-free security check", "cadence": "pre-pr", "kind": "security", "configured": true, "command": "node", "args": ["scripts/security-scan.mjs"], "timeout_ms": 30000 }
+  ],
+  "boundaries": [],
+  "performance_budgets": [{ "id": "suite-duration", "check_id": "local-smoke", "metric": "duration_ms", "maximum": 30000, "scope": "task-board success and invalid-input journeys" }]
+}
